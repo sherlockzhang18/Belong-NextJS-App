@@ -1,9 +1,12 @@
 import Head from "next/head";
 import Link from "next/link";
-import { useCart, Event } from "../context/CartContext";
+import { useCart, Event, CartHook } from "../context/useCart";
 
-export default function Home() {
-  const Cart = useCart();
+interface HomeProps {
+  cart: CartHook
+}
+
+export default function Home( {cart}: HomeProps) {
 
   const sampleEvent: Event = {
     id: "evt-1",
@@ -20,7 +23,7 @@ export default function Home() {
       <main style={{ padding: 20 }}>
         <header style={{ display: "flex", justifyContent: "space-between" }}>
           <h1>Events</h1>
-          <Link href="/cart"> Cart ({Cart.items.length})</Link>
+          <Link href="/cart"> Cart ({cart.items.length})</Link>
         </header>
 
         {/* sample event card */}
@@ -34,7 +37,7 @@ export default function Home() {
         >
           <h2>{sampleEvent.title}</h2>
           <p>Price: ${sampleEvent.price.toFixed(2)}</p>
-          <button onClick={() => Cart.add(sampleEvent)}>Add to cart</button>
+          <button onClick={() => cart.add(sampleEvent)}>Add to cart</button>
         </div>
       </main>
     </>

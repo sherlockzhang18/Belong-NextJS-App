@@ -1,9 +1,12 @@
 import Head from "next/head";
 import Link from "next/link";
-import { useCart } from "../context/CartContext";
+import { CartHook } from "@/context/useCart";
 
-export default function CartPage() {
-  const { items, remove, clear } = useCart();
+interface CartPageProps {
+  cart: CartHook
+}
+
+export default function CartPage( {cart}: CartPageProps ) {
 
   return (
     <>
@@ -17,22 +20,22 @@ export default function CartPage() {
           <Link href="/"> Back to Events</Link>
         </header>
 
-        {items.length === 0 ? (
+        {cart.items.length === 0 ? (
           <p>(empty)</p>
         ) : (
           <>
             <ul>
-              {items.map((i) => (
+              {cart.items.map((i) => (
                 <li key={i.id} style={{ marginBottom: 8 }}>
                   {i.title} x {i.quantity} = $
                   {(i.price * i.quantity).toFixed(2)}
-                  <button onClick={() => remove(i)} style={{ marginLeft: 8 }}>
+                  <button onClick={() => cart.remove(i)} style={{ marginLeft: 8 }}>
                     Remove one
                   </button>
                 </li>
               ))}
             </ul>
-            <button onClick={clear} style={{ marginTop: 12 }}>
+            <button onClick={cart.clear} style={{ marginTop: 12 }}>
               Clear cart
             </button>
           </>
