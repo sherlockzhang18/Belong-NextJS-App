@@ -1,43 +1,47 @@
+"use client";
+
 import Head from "next/head";
 import Link from "next/link";
-import { CartHook } from "@/context/useCart";
+import useCart from "@/context/useCart";
 
-interface CartPageProps {
-  cart: CartHook
-}
-
-export default function CartPage( {cart}: CartPageProps ) {
+export default function CartPage() {
+  const { items, remove, clear, checkout } = useCart();
 
   return (
     <>
       <Head>
-        <title>Your Cart - Chivent</title>
+        <title>Your Cart – Chivent</title>
       </Head>
-
       <main style={{ padding: 20 }}>
         <header style={{ display: "flex", justifyContent: "space-between" }}>
           <h1>Your Cart</h1>
-          <Link href="/"> Back to Events</Link>
+          <Link href="/">← Back to Home</Link>
         </header>
 
-        {cart.items.length === 0 ? (
+        {items.length === 0 ? (
           <p>(empty)</p>
         ) : (
           <>
-            <ul>
-              {cart.items.map((i) => (
-                <li key={i.id} style={{ marginBottom: 8 }}>
-                  {i.title} x {i.quantity} = $
-                  {(i.price * i.quantity).toFixed(2)}
-                  <button onClick={() => cart.remove(i)} style={{ marginLeft: 8 }}>
-                    Remove one
+            <ul style={{ marginTop: 20 }}>
+              {items.map((i) => (
+                <li key={`${i.id}-${i.size}`} style={{ marginBottom: 12 }}>
+                  {i.title} × {i.quantity} = $
+                  {((i.price?.unit_amount ?? 0) * (i.quantity ?? 1)) / 100}
+                  <button
+                    onClick={() => remove(i.id, i.size)}
+                    style={{ marginLeft: 8 }}
+                  >
+                    Remove
                   </button>
                 </li>
               ))}
             </ul>
-            <button onClick={cart.clear} style={{ marginTop: 12 }}>
+            <button onClick={clear} style={{ marginTop: 12 }}>
               Clear cart
             </button>
+            <pre style={{ marginTop: 20 }}>
+              Checkout payload: {JSON.stringify(checkout(), null, 2)}
+            </pre>
           </>
         )}
       </main>

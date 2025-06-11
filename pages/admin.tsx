@@ -1,24 +1,22 @@
-import { useRouter } from "next/router";
+"use client";
 
-const ADMIN_PASSWORD = "123456";
+import Link from "next/link";
 
 export default function AdminPage() {
-  const { query } = useRouter();
-  const pw = Array.isArray(query.password) ? query.password[0] : query.password;
+  const handleLogout = () => {
+    localStorage.removeItem("authToken");
+    window.location.href = "/login";
+  };
 
-  // if no password
-  if (!pw) {
-    return <p>Missing password. Append <code>?password=YOUR_PASSWORD</code> to the URL.</p>;
-  }
-  if (pw !== ADMIN_PASSWORD) {
-    return <p>Invalid password.</p>;
-  }
-
-  // Authorized
   return (
-    <div style={{ padding: 20 }}>
-      <h1> Admin Dashboard</h1>
-      <p>Welcome, admin. 🛠️</p>
-    </div>
+    <main style={{ padding: 20 }}>
+      <h1>🔒 Admin Dashboard</h1>
+      <button onClick={handleLogout}>Log Out</button>
+      <nav style={{ marginTop: 20 }}>
+        <Link href="/cart">Go to Cart</Link>
+        <br />
+        <Link href="/">Back to Home</Link>
+      </nav>
+    </main>
   );
 }

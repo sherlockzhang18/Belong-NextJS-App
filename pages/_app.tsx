@@ -1,8 +1,11 @@
 import "@/styles/globals.css";
-import { AppProps } from "next/app";
-import { useCart } from "@/context/useCart";
+import type { AppProps } from "next/app";
+import RouteGuard from "@/components/RouteGuard";
 
 export default function MyApp({ Component, pageProps }: AppProps) {
-    const cart = useCart();
-    return <Component {...pageProps} cart={cart}/>;
+  return (
+    <RouteGuard>
+      <Component {...pageProps} />
+    </RouteGuard>
+  );
 }
