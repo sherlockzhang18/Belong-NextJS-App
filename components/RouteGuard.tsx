@@ -1,5 +1,3 @@
-"use client";
-
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 
@@ -7,7 +5,7 @@ interface RouteGuardProps {
   children: React.ReactNode;
 }
 
-const PROTECTED_PATHS = ["/cart", "/admin"];
+const PROTECTED_PATHS = ["/admin"];
 
 export default function RouteGuard({ children }: RouteGuardProps) {
   const router = useRouter();
