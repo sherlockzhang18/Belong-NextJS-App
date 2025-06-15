@@ -1,8 +1,8 @@
 import React from "react";
 import Link from "next/link";
+import Button from "@mui/material/Button";
 import { sampleEvents } from "../services/eventsData";
-import { Event } from "@jstiava/chronos";
-import { dayjs } from "@jstiava/chronos";
+import { Event, dayjs } from "@jstiava/chronos";
 import EventCard from "../components/EventCard";
 
 export default function Home() {
@@ -17,7 +17,14 @@ export default function Home() {
     return (
         <main>
             <div style={{ padding: "1rem" }}>
-                <Link href="/cart">🛒 View Cart</Link>
+                <Button
+                    component={Link}
+                    href="/cart"
+                    variant="contained"
+                    color="primary"
+                >
+                    View Cart
+                </Button>
             </div>
             <h1>Upcoming Events</h1>
             <div className="event-grid">

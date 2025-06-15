@@ -1,10 +1,10 @@
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import Button from "@mui/material/Button";
 import { Event as ChronosEvent, dayjs } from "@jstiava/chronos";
 import { sampleEvents } from "../../services/eventsData";
 import { useCart } from "../../services/useCart";
-import Button from "@mui/material/Button";
 
 export default function EventDetail() {
     const router = useRouter();
@@ -23,7 +23,14 @@ export default function EventDetail() {
         return (
             <div className="event-detail">
                 <p>Event not found.</p>
-                <Link href="/">← Back to events</Link>
+                <Button
+                    component={Link}
+                    href="/"
+                    variant="text"
+                    color="primary"
+                >
+                    ← Back to events
+                </Button>
             </div>
         );
 
@@ -42,7 +49,15 @@ export default function EventDetail() {
 
     return (
         <main className="event-detail">
-            <Link href="/">← Back to events</Link>
+            <Button
+                component={Link}
+                href="/"
+                variant="text"
+                color="primary"
+                sx={{ mb: 2 }}
+            >
+                ← Back to events
+            </Button>
             <h1>{event.name}</h1>
             {event.getCoverImageLink() && (
                 <img
