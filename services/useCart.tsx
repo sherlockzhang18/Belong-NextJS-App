@@ -7,79 +7,79 @@ import { Event } from '@jstiava/chronos'
 const STORAGE_KEY = 'my-cart'
 
 export type CartItem = {
-  event: ChronosEvent
-  quantity: number
+    event: ChronosEvent
+    quantity: number
 }
 
 export function useCart() {
-  const [items, setItems] = useState<CartItem[]>([])
+    const [items, setItems] = useState<CartItem[]>([])
 
-  // Load persisted cart on mount
-  useEffect(() => {
-    try {
-      const data = localStorage.getItem(STORAGE_KEY)
-      if (data) {
-        const parsed: { event: EventData; quantity: number }[] = JSON.parse(data)
-        const restored = parsed.map(({ event, quantity }) => ({
-          event: new Event(event, true),
-          quantity,
-        }))
-        setItems(restored)
-      }
-    } catch (e) {
-      console.error('Failed to load cart:', e)
+    // Load persisted cart on mount
+    useEffect(() => {
+        try {
+            const data = localStorage.getItem(STORAGE_KEY)
+            if (data) {
+                const parsed: { event: EventData; quantity: number }[] = JSON.parse(data)
+                const restored = parsed.map(({ event, quantity }) => ({
+                    event: new Event(event, true),
+                    quantity,
+                }))
+                setItems(restored)
+            }
+        } catch (e) {
+            console.error('Failed to load cart:', e)
+        }
+    }, [])
+
+    // Persist cart whenever it changes
+    useEffect(() => {
+        try {
+            const toStore = items.map(({ event, quantity }) => ({
+                event: event.eject(true),
+                quantity,
+            }))
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(toStore))
+        } catch (e) {
+            console.error('Failed to save cart:', e)
+        }
+    }, [items])
+
+    function add(event: ChronosEvent) {
+        setItems((prev) => {
+            const idx = prev.findIndex((c) => c.event.uuid === event.uuid)
+            if (idx >= 0) {
+                const next = [...prev]
+                next[idx].quantity++
+                return next
+            }
+            return [...prev, { event, quantity: 1 }]
+        })
     }
-  }, [])
 
-  // Persist cart whenever it changes
-  useEffect(() => {
-    try {
-      const toStore = items.map(({ event, quantity }) => ({
-        event: event.eject(true),
-        quantity,
-      }))
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(toStore))
-    } catch (e) {
-      console.error('Failed to save cart:', e)
+    function remove(event: ChronosEvent) {
+        setItems((prev) => {
+            const idx = prev.findIndex((c) => c.event.uuid === event.uuid)
+            if (idx === -1) return prev
+            const next = [...prev]
+            if (next[idx].quantity > 1) {
+                next[idx].quantity--
+            } else {
+                next.splice(idx, 1)
+            }
+            return next
+        })
     }
-  }, [items])
 
-  function add(event: ChronosEvent) {
-    setItems((prev) => {
-      const idx = prev.findIndex((c) => c.event.uuid === event.uuid)
-      if (idx >= 0) {
-        const next = [...prev]
-        next[idx].quantity++
-        return next
-      }
-      return [...prev, { event, quantity: 1 }]
-    })
-  }
+    function clear() {
+        setItems([])
+    }
 
-  function remove(event: ChronosEvent) {
-    setItems((prev) => {
-      const idx = prev.findIndex((c) => c.event.uuid === event.uuid)
-      if (idx === -1) return prev
-      const next = [...prev]
-      if (next[idx].quantity > 1) {
-        next[idx].quantity--
-      } else {
-        next.splice(idx, 1)
-      }
-      return next
-    })
-  }
+    const totalPrice = items.reduce((sum, { event, quantity }) => {
+        // metadata.price like "$49"
+        const raw = event.metadata?.price?.toString().replace(/[^0-9.]/g, '') || '0'
+        const num = parseFloat(raw) || 0
+        return sum + num * quantity
+    }, 0)
 
-  function clear() {
-    setItems([])
-  }
-
-  const totalPrice = items.reduce((sum, { event, quantity }) => {
-    // metadata.price like "$49"
-    const raw = event.metadata?.price?.toString().replace(/[^0-9.]/g, '') || '0'
-    const num = parseFloat(raw) || 0
-    return sum + num * quantity
-  }, 0)
-
-  return { items, add, remove, clear, totalPrice }
+    return { items, add, remove, clear, totalPrice }
 }

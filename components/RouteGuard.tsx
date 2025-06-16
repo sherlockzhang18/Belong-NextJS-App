@@ -1,45 +1,50 @@
-import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { useRouter } from 'next/router'
+import { useEffect, useState } from 'react'
 
 interface RouteGuardProps {
-    children: React.ReactNode;
+    children: React.ReactNode
 }
 
-const PROTECTED_PATHS = ["/admin"];
+const PROTECTED_PATHS = ['/cart', '/admin']
 
 export default function RouteGuard({ children }: RouteGuardProps) {
-    const router = useRouter();
-    const [authorized, setAuthorized] = useState(false);
+    const router = useRouter()
+    const [authorized, setAuthorized] = useState(false)
 
     useEffect(() => {
-        authCheck(router.asPath);
+        authCheck(router.asPath)
 
-        const hideOnRouteChange = () => setAuthorized(false);
-        router.events.on("routeChangeStart", hideOnRouteChange);
-        router.events.on("routeChangeComplete", authCheck);
-
+        const handleComplete = (url: string) => authCheck(url)
+        router.events.on('routeChangeComplete', handleComplete)
         return () => {
-            router.events.off("routeChangeStart", hideOnRouteChange);
-            router.events.off("routeChangeComplete", authCheck);
-        };
-    }, []);
+            router.events.off('routeChangeComplete', handleComplete)
+        }
+    }, [])
 
-    function authCheck(url: string) {
-        const path = url.split("?")[0];
-        const isProtected = PROTECTED_PATHS.includes(path);
-        const isLoggedIn = Boolean(localStorage.getItem("authToken"));
+    async function authCheck(url: string) {
+        const path = url.split('?')[0]
+        const isProtected = PROTECTED_PATHS.includes(path)
 
-        if (isProtected && !isLoggedIn) {
-            setAuthorized(false);
-            router.push("/login");
-        } else {
-            setAuthorized(true);
+        if (!isProtected) {
+            setAuthorized(true)
+            return
+        }
+
+        try {
+            const res = await fetch('/api/me')
+            if (res.ok) {
+                setAuthorized(true)
+            } else {
+                setAuthorized(false)
+                router.push('/login')
+            }
+        } catch {
+            setAuthorized(false)
+            router.push('/login')
         }
     }
 
-    if (!authorized) {
-        return null;
-    }
-
-    return <>{children}</>;
+    if (!authorized) return null
+    return <>{children}</>
 }
+// 
