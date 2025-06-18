@@ -4,63 +4,71 @@ import { Event as ChronosEvent } from '@jstiava/chronos'
 import Button from '@mui/material/Button'
 
 type Props = {
-  event: ChronosEvent
+    event: ChronosEvent
 }
 
 export default function EventCard({ event }: Props) {
-  // Format date
-  const dateStr = event.date?.format('MMM D, YYYY') || ''
+    // Format date
+    const dateStr = event.date?.format('MMM D, YYYY') || ''
 
-  // Format times (Chronos decimal‐hour → HH:MM)
-  const formatTime = (
-    c: ChronosEvent['start_time'] | ChronosEvent['end_time']
-  ) => {
-    if (!c) return ''
-    const h = c.getHour()
-    const m = Math.round(c.getMinute() || 0)
-    return `${h}:${String(m).padStart(2, '0')}`
-  }
-  const timeStr =
-    event.start_time && event.end_time
-      ? `${formatTime(event.start_time)}–${formatTime(event.end_time)}`
-      : event.start_time
-      ? formatTime(event.start_time)
-      : ''
+    // Format times (Chronos decimal‐hour → HH:MM)
+    const formatTime = (
+        c: ChronosEvent['start_time'] | ChronosEvent['end_time']
+    ) => {
+        if (!c) return ''
+        const h = c.getHour()
+        const m = Math.round(c.getMinute() || 0)
+        return `${h}:${String(m).padStart(2, '0')}`
+    }
 
-  return (
-    <div className="event-card">
-      {event.getCoverImageLink() && (
-        <img
-          src={event.getCoverImageLink()!}
-          alt={event.name}
-          className="cover-image"
-        />
-      )}
-      <div className="event-body">
-        <h2>{event.name}</h2>
-        <p className="subtitle">{event.subtitle}</p>
-        <p className="description">{event.metadata?.description}</p>
+    const timeStr =
+        event.start_time && event.end_time
+            ? `${formatTime(event.start_time)}–${formatTime(event.end_time)}`
+            : event.start_time
+                ? formatTime(event.start_time)
+                : ''
 
-        <p className="info">
-          <span>{dateStr}</span>
-          {timeStr && <span> • {timeStr}</span>}
-        </p>
-        <p className="info">
-          <span>{event.location_name}</span>
-          {event.metadata?.price && <span> • {event.metadata.price}</span>}
-        </p>
+    // Pull description & price from metadata
+    const description = event.metadata?.description
+    const price = event.metadata?.price
 
-        <Button
-          component={Link}
-          href={`/events/${event.uuid}`}
-          variant="contained"
-          color="primary"
-          fullWidth
-          sx={{ mt: 2 }}
-        >
-          View Details
-        </Button>
-      </div>
-    </div>
-  )
+    return (
+        <div className="event-card">
+            {event.getCoverImageLink() && (
+                <img
+                    src={event.getCoverImageLink()!}
+                    alt={event.name}
+                    className="cover-image"
+                />
+            )}
+            <div className="event-body">
+                <h2>{event.name}</h2>
+                <p className="subtitle">{event.subtitle}</p>
+
+                {description && (
+                    <p className="description">{description}</p>
+                )}
+
+                <p className="info">
+                    <span>{dateStr}</span>
+                    {timeStr && <span> • {timeStr}</span>}
+                </p>
+                <p className="info">
+                    <span>{event.location_name}</span>
+                    {price && <span> • ${price}</span>}
+                </p>
+
+                <Button
+                    component={Link}
+                    href={`/events/${event.uuid}`}
+                    variant="contained"
+                    color="primary"
+                    fullWidth
+                    sx={{ mt: 2 }}
+                >
+                    View Details
+                </Button>
+            </div>
+        </div>
+    )
 }

@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "drizzle:generate": "drizzle-kit generate",
+    "drizzle:migrate": "drizzle-kit migrate",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -17,6 +19,8 @@
     "bcrypt": "^6.0.0",
     "cookie": "^1.0.2",
     "dayjs": "^1.11.13",
+    "dotenv": "^16.5.0",
+    "drizzle-orm": "^0.44.2",
     "jsonwebtoken": "^9.0.2",
     "next": "15.3.3",
     "pg": "^8.16.0",
@@ -33,6 +37,7 @@
     "@types/pg": "^8.15.4",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "drizzle-kit": "^0.31.1",
     "eslint": "^9",
     "eslint-config-next": "15.3.3",
     "typescript": "^5"

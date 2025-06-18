@@ -47,4 +47,3 @@ export default function RouteGuard({ children }: RouteGuardProps) {
     if (!authorized) return null
     return <>{children}</>
 }
-// 
