@@ -10,9 +10,8 @@ type Props = {
 
 export default function EventCard({ event, editMode }: Props) {
     const dateStr = event.date?.format('MMM D, YYYY') || ''
-    const formatTime = (
-        c: ChronosEvent['start_time'] | ChronosEvent['end_time']
-    ) => {
+
+    const formatTime = (c?: ChronosEvent['start_time'] | ChronosEvent['end_time']) => {
         if (!c) return ''
         const h = c.getHour()
         const m = Math.round(c.getMinute() || 0)
@@ -31,11 +30,7 @@ export default function EventCard({ event, editMode }: Props) {
     return (
         <div className="event-card">
             {event.getCoverImageLink() && (
-                <img
-                    src={event.getCoverImageLink()!}
-                    alt={event.name}
-                    className="cover-image"
-                />
+                <img src={event.getCoverImageLink()!} alt={event.name} className="cover-image" />
             )}
             <div className="event-body">
                 <h2>{event.name}</h2>
