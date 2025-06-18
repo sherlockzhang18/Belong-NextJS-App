@@ -5,13 +5,11 @@ import Button from '@mui/material/Button'
 
 type Props = {
     event: ChronosEvent
+    editMode: boolean
 }
 
-export default function EventCard({ event }: Props) {
-    // Format date
+export default function EventCard({ event, editMode }: Props) {
     const dateStr = event.date?.format('MMM D, YYYY') || ''
-
-    // Format times (Chronos decimal‐hour → HH:MM)
     const formatTime = (
         c: ChronosEvent['start_time'] | ChronosEvent['end_time']
     ) => {
@@ -20,7 +18,6 @@ export default function EventCard({ event }: Props) {
         const m = Math.round(c.getMinute() || 0)
         return `${h}:${String(m).padStart(2, '0')}`
     }
-
     const timeStr =
         event.start_time && event.end_time
             ? `${formatTime(event.start_time)}–${formatTime(event.end_time)}`
@@ -28,7 +25,6 @@ export default function EventCard({ event }: Props) {
                 ? formatTime(event.start_time)
                 : ''
 
-    // Pull description & price from metadata
     const description = event.metadata?.description
     const price = event.metadata?.price
 
@@ -44,10 +40,7 @@ export default function EventCard({ event }: Props) {
             <div className="event-body">
                 <h2>{event.name}</h2>
                 <p className="subtitle">{event.subtitle}</p>
-
-                {description && (
-                    <p className="description">{description}</p>
-                )}
+                {description && <p className="description">{description}</p>}
 
                 <p className="info">
                     <span>{dateStr}</span>
@@ -68,6 +61,19 @@ export default function EventCard({ event }: Props) {
                 >
                     View Details
                 </Button>
+
+                {editMode && (
+                    <Button
+                        component={Link}
+                        href={`/admin/events/${event.uuid}`}
+                        variant="outlined"
+                        color="secondary"
+                        fullWidth
+                        sx={{ mt: 1 }}
+                    >
+                        Edit Event
+                    </Button>
+                )}
             </div>
         </div>
     )

@@ -14,6 +14,7 @@ export const users = pgTable('users', {
   username:    text('username').notNull().unique(),
   passkey:     text('passkey').notNull(),
   created_on:  timestamp('created_on').defaultNow().notNull(),
+  role:        text('role').notNull().default('user'),
 })
 
 export const events = pgTable('events', {

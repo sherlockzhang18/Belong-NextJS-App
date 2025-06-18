@@ -2,48 +2,53 @@ import { useRouter } from 'next/router'
 import { useEffect, useState } from 'react'
 
 interface RouteGuardProps {
-    children: React.ReactNode
+  children: React.ReactNode
 }
 
 const PROTECTED_PATHS = ['/cart', '/admin']
 
 export default function RouteGuard({ children }: RouteGuardProps) {
-    const router = useRouter()
-    const [authorized, setAuthorized] = useState(false)
+  const router = useRouter()
+  const [authorized, setAuthorized] = useState(false)
 
-    useEffect(() => {
-        authCheck(router.asPath)
+  useEffect(() => {
+    // authCheck runs on initial load and on every route change
+    const authCheck = async (url: string) => {
+      const path = url.split('?')[0]
+      const needsAuth = PROTECTED_PATHS.some(p => path.startsWith(p))
 
-        const handleComplete = (url: string) => authCheck(url)
-        router.events.on('routeChangeComplete', handleComplete)
-        return () => {
-            router.events.off('routeChangeComplete', handleComplete)
+      if (!needsAuth) {
+        setAuthorized(true)
+        return
+      }
+
+      try {
+        const res = await fetch('/api/me', {
+          credentials: 'include',  // ← send HTTP-only session cookie
+        })
+        if (res.ok) {
+          setAuthorized(true)
+        } else {
+          setAuthorized(false)
+          router.push('/login')
         }
-    }, [])
-
-    async function authCheck(url: string) {
-        const path = url.split('?')[0]
-        const isProtected = PROTECTED_PATHS.includes(path)
-
-        if (!isProtected) {
-            setAuthorized(true)
-            return
-        }
-
-        try {
-            const res = await fetch('/api/me')
-            if (res.ok) {
-                setAuthorized(true)
-            } else {
-                setAuthorized(false)
-                router.push('/login')
-            }
-        } catch {
-            setAuthorized(false)
-            router.push('/login')
-        }
+      } catch {
+        setAuthorized(false)
+        router.push('/login')
+      }
     }
 
-    if (!authorized) return null
-    return <>{children}</>
+    // run the initial check
+    authCheck(router.asPath)
+
+    // re-check on route changes
+    router.events.on('routeChangeComplete', authCheck)
+    return () => {
+      router.events.off('routeChangeComplete', authCheck)
+    }
+  }, [router])
+
+  // while we’re waiting for auth, don't render children
+  if (!authorized) return null
+  return <>{children}</>
 }

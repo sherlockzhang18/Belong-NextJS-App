@@ -14,7 +14,11 @@ export default function RegisterPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         try {
-            await axios.post('/api/register', { username, password })
+            await axios.post(
+                '/api/register',
+                { username, password },
+                { withCredentials: true }
+            )
             router.push('/')
         } catch (err: any) {
             setError(err.response?.data?.message || 'Registration failed')
@@ -24,7 +28,10 @@ export default function RegisterPage() {
     return (
         <Container maxWidth="xs" sx={{ mt: 8 }}>
             <h1>Register</h1>
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <form
+                onSubmit={handleSubmit}
+                style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
+            >
                 <TextField
                     label="Username"
                     value={username}
@@ -39,7 +46,9 @@ export default function RegisterPage() {
                     required
                 />
                 {error && <p style={{ color: 'red' }}>{error}</p>}
-                <Button type="submit" variant="contained">Register</Button>
+                <Button type="submit" variant="contained">
+                    Register
+                </Button>
             </form>
             <Button onClick={() => router.push('/login')} sx={{ mt: 2 }}>
                 Already have an account? Log In

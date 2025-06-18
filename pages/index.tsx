@@ -1,54 +1,89 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import Link from 'next/link'
+import { useRouter } from 'next/router'
 import Button from '@mui/material/Button'
 import { Event as ChronosEvent, dayjs } from '@jstiava/chronos'
 import EventCard from '../components/EventCard'
+import { useCurrentUser } from '../services/useCurrentUser'
 
 export default function Home() {
-    const [events, setEvents] = useState<ChronosEvent[]>([])
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
+  const router = useRouter()
+  const { isAdmin, isAuthenticated, refresh } = useCurrentUser()
+  const [events, setEvents] = useState<ChronosEvent[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-    useEffect(() => {
-        axios
-            .get<{ events: any[] }>('/api/events')
-            .then(({ data }) => {
-                const wrapped = data.events.map(e => new ChronosEvent(e, true))
-                setEvents(wrapped)
-            })
-            .catch(err => {
-                console.error(err)
-                setError(err.message)
-            })
-            .finally(() => setLoading(false))
-    }, [])
+  useEffect(() => {
+    axios
+      .get<{ events: any[] }>('/api/events')
+      .then(({ data }) => {
+        const wrapped = data.events.map(e => new ChronosEvent(e, true))
+        setEvents(wrapped)
+      })
+      .catch(err => {
+        console.error(err)
+        setError(err.message)
+      })
+      .finally(() => setLoading(false))
+  }, [])
 
-    if (loading) return <p>Loading events…</p>
-    if (error) return <p style={{ color: 'red' }}>Error: {error}</p>
+  const handleLogout = async () => {
+    try {
+      await axios.post(
+        '/api/logout',
+        {},
+        { withCredentials: true }
+      )
+      refresh()            // update auth state
+      router.push('/login')
+    } catch (err) {
+      console.error('Logout failed', err)
+    }
+  }
 
-    // filter
-    const today = dayjs().startOf('day')
-    const upcoming = events.filter(e =>
-        e.date
-            ? e.date.isSame(today, 'day') || e.date.isAfter(today, 'day')
-            : false
-    )
+  if (loading) return <p>Loading events…</p>
+  if (error)   return <p style={{ color: 'red' }}>Error: {error}</p>
 
-    return (
-        <main>
-            <div style={{ padding: '1rem' }}>
-                <Button component={Link} href="/cart" variant="contained" color="primary">
-                    View Cart
-                </Button>
-            </div>
+  const today    = dayjs().startOf('day')
+  const upcoming = events.filter(e =>
+    e.date ? e.date.isSame(today, 'day') || e.date.isAfter(today, 'day') : false
+  )
 
-            <h1>Upcoming Events</h1>
-            <div className="event-grid">
-                {upcoming.map(e => (
-                    <EventCard key={e.uuid} event={e} />
-                ))}
-            </div>
-        </main>
-    )
+  return (
+    <main>
+      <div style={{ padding: '1rem', display: 'flex', gap: '1rem' }}>
+        <Button
+          component={Link}
+          href="/cart"
+          variant="contained"
+          color="primary"
+        >
+          View Cart
+        </Button>
+        {isAdmin && (
+          <Button
+            component={Link}
+            href="/admin"
+            variant="outlined"
+            color="secondary"
+          >
+            Admin Dashboard
+          </Button>
+        )}
+        {isAuthenticated && (
+          <Button onClick={handleLogout} variant="text" color="inherit">
+            Log Out
+          </Button>
+        )}
+      </div>
+
+      <h1>Upcoming Events</h1>
+      <div className="event-grid">
+        {upcoming.map(e => (
+          <EventCard key={e.uuid} event={e} editMode={isAdmin} />
+        ))}
+      </div>
+    </main>
+  )
 }
