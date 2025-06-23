@@ -1,20 +1,21 @@
 import React from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Event as ChronosEvent } from '@jstiava/chronos'
 import Button from '@mui/material/Button'
 
 type Props = {
     event: ChronosEvent
-    editMode: boolean
 }
 
-export default function EventCard({ event, editMode }: Props) {
-    const dateStr = event.date?.format('MMM D, YYYY') || ''
+export default function EventCard({ event }: Props) {
+    const files = event.metadata?.files as string[] | undefined
+    const firstImage = files?.[0] ?? event.getCoverImageLink()
 
-    const formatTime = (c?: ChronosEvent['start_time'] | ChronosEvent['end_time']) => {
-        if (!c) return ''
-        const h = c.getHour()
-        const m = Math.round(c.getMinute() || 0)
+    const dateStr = event.date?.format('MMM D, YYYY') || ''
+    const formatTime = (t: NonNullable<ChronosEvent['start_time']>) => {
+        const h = t.getHour()
+        const m = Math.round(t.getMinute() || 0)
         return `${h}:${String(m).padStart(2, '0')}`
     }
     const timeStr =
@@ -24,26 +25,33 @@ export default function EventCard({ event, editMode }: Props) {
                 ? formatTime(event.start_time)
                 : ''
 
-    const description = event.metadata?.description
-    const price = event.metadata?.price
-
     return (
         <div className="event-card">
-            {event.getCoverImageLink() && (
-                <img src={event.getCoverImageLink()!} alt={event.name} className="cover-image" />
+            {firstImage && (
+                <div className="cover-container">
+                    <Image
+                        src={firstImage}
+                        alt={event.name}
+                        layout="fill"
+                        objectFit="cover"
+                        className="cover-image"
+                    />
+                </div>
             )}
             <div className="event-body">
-                <h2>{event.name}</h2>
-                <p className="subtitle">{event.subtitle}</p>
-                {description && <p className="description">{description}</p>}
+                <h2 className="event-title">{event.name}</h2>
+                {event.subtitle && <p className="event-subtitle">{event.subtitle}</p>}
+                {event.metadata?.description && (
+                    <p className="event-description">{event.metadata.description}</p>
+                )}
 
-                <p className="info">
-                    <span>{dateStr}</span>
-                    {timeStr && <span> • {timeStr}</span>}
+                <p className="event-info">
+                    {dateStr}
+                    {timeStr && ` • ${timeStr}`}
                 </p>
-                <p className="info">
-                    <span>{event.location_name}</span>
-                    {price && <span> • ${price}</span>}
+                <p className="event-info">
+                    {event.location_name}
+                    {event.metadata?.price && ` • $${event.metadata.price}`}
                 </p>
 
                 <Button
@@ -56,19 +64,6 @@ export default function EventCard({ event, editMode }: Props) {
                 >
                     View Details
                 </Button>
-
-                {editMode && (
-                    <Button
-                        component={Link}
-                        href={`/admin/events/${event.uuid}`}
-                        variant="outlined"
-                        color="secondary"
-                        fullWidth
-                        sx={{ mt: 1 }}
-                    >
-                        Edit Event
-                    </Button>
-                )}
             </div>
         </div>
     )

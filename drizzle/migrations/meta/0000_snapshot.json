@@ -1,5 +1,5 @@
 {
-  "id": "e99082a2-7004-4a10-874d-fd4a8a8a0534",
+  "id": "e6618554-775a-43be-a385-2a8691767df8",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -61,6 +61,13 @@
           "type": "jsonb",
           "primaryKey": false,
           "notNull": true
+        },
+        "images": {
+          "name": "images",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'"
         }
       },
       "indexes": {},

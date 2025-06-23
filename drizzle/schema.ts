@@ -11,7 +11,7 @@ import {
 import { InferModel } from 'drizzle-orm'
 
 export const users = pgTable('users', {
-    uuid: uuid('uuid').defaultRandom().primaryKey(),  // ← restore this
+    uuid: uuid('uuid').defaultRandom().primaryKey(),
     username: text('username').notNull().unique(),
     passkey: text('passkey').notNull(),
     created_on: timestamp('created_on').defaultNow().notNull(),
@@ -28,6 +28,7 @@ export const events = pgTable('events', {
     end_time: time('end_time').notNull(),
     location_name: text('location_name'),
     metadata: jsonb('metadata').notNull(),
+    images: jsonb('images').notNull().default('[]'),
 })
 
 export type NewUser = InferModel<typeof users, 'insert'>

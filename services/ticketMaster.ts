@@ -19,14 +19,9 @@ export async function fetchTicketMasterRaw(): Promise<any> {
  */
 export async function fetchTicketMasterEvents(): Promise<NewEvent[]> {
     const listRes = await axios.get(`${BASE_URL}/events.json`, {
-        params: {
-            apikey: API_KEY,
-            size: PAGE_SIZE,
-            locale: 'en-us',
-        },
+        params: { apikey: API_KEY, size: PAGE_SIZE, locale: 'en-us' },
     })
     const items = (listRes.data._embedded?.events as any[]) || []
-
     const seen = new Set<string>()
     const uniques = items.filter(e => {
         if (seen.has(e.name)) return false
@@ -36,19 +31,18 @@ export async function fetchTicketMasterEvents(): Promise<NewEvent[]> {
 
     const detailed: NewEvent[] = []
     for (const e of uniques) {
-        let full: any = e
+        let full = e
         try {
-            const detailRes = await axios.get(`${BASE_URL}/events/${e.id}.json`, {
+            const detail = await axios.get(`${BASE_URL}/events/${e.id}.json`, {
                 params: { apikey: API_KEY, locale: 'en-us' },
             })
-            full = detailRes.data
+            full = detail.data
         } catch {
         }
 
         const dateStr = full.dates?.start?.localDate ?? '1970-01-01'
-        const rawStart = full.dates?.start?.localTime || ''
-        const [sh, sm, ss] = rawStart.split(':')
-        const startTime = rawStart
+        const [sh, sm, ss] = (full.dates?.start?.localTime || '').split(':')
+        const startTime = full.dates?.start?.localTime
             ? [sh.padStart(2, '0'), sm.padStart(2, '0'), (ss || '00').padStart(2, '0')].join(':')
             : '00:00:00'
 
@@ -63,12 +57,16 @@ export async function fetchTicketMasterEvents(): Promise<NewEvent[]> {
         }
 
         let priceStr: string | null = null
-        if (Array.isArray(full.priceRanges) && full.priceRanges[0]) {
+        if (Array.isArray(full.priceRanges)?.[0]) {
             const pr = full.priceRanges[0]
             priceStr = pr.min === pr.max
                 ? pr.min.toFixed(2)
                 : `${pr.min.toFixed(2)}–${pr.max.toFixed(2)}`
         }
+
+        const tmImages: string[] = (full.images as any[] || [])
+            .slice(0, 3)
+            .map((img: any) => img.url)
 
         const description = full.info || full.description || null
         const venue = full._embedded?.venues?.[0]?.name ?? null
@@ -87,7 +85,8 @@ export async function fetchTicketMasterEvents(): Promise<NewEvent[]> {
                 ...(description && { description }),
                 event_link: full.url ?? null,
             },
-        })
+            images: tmImages,
+        } as NewEvent)
     }
 
     return detailed
