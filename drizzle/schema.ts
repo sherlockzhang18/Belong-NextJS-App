@@ -19,7 +19,7 @@ export const users = pgTable('users', {
 })
 
 export const events = pgTable('events', {
-    uuid: text('uuid').primaryKey(),
+    uuid: uuid('uuid').defaultRandom().primaryKey().notNull(),
     name: text('name').notNull(),
     subtitle: text('subtitle'),
     description: text('description'),
@@ -29,6 +29,7 @@ export const events = pgTable('events', {
     location_name: text('location_name'),
     metadata: jsonb('metadata').notNull(),
     images: jsonb('images').notNull().default('[]'),
+    tm_id: text('tm_id').unique(),
 })
 
 export type NewUser = InferModel<typeof users, 'insert'>

@@ -4,7 +4,7 @@ import Link from 'next/link'
 import Button from '@mui/material/Button'
 import axios from 'axios'
 import { Event as ChronosEvent, dayjs } from '@jstiava/chronos'
-import { useCart } from '../../services/useCart'
+import { useCart } from '../../../services/useCart'
 
 export default function EventDetail() {
     const router = useRouter()

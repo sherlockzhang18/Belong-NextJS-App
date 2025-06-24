@@ -8,20 +8,17 @@ export default async function handler(
     req: NextApiRequest,
     res: NextApiResponse
 ) {
-    // 1) Admin-only
     const user = await getUserFromReq(req, res)
     if (!user || user.role !== 'admin') {
         return res.status(403).json({ error: 'Forbidden' })
     }
 
-    // 2) Only POST allowed
     if (req.method !== 'POST') {
         res.setHeader('Allow', ['POST'])
         return res.status(405).end()
     }
 
     try {
-        // 3) Fetch up to 30 events from TM
         const events = await fetchTicketMasterEvents()
         let synced = 0
 
@@ -29,7 +26,7 @@ export default async function handler(
             await db
                 .insert(schema.events)
                 .values({
-                    uuid: ev.uuid,
+                    tm_id: ev.uuid,
                     name: ev.name,
                     subtitle: ev.subtitle,
                     description: ev.description,
@@ -44,7 +41,7 @@ export default async function handler(
                     },
                 })
                 .onConflictDoUpdate({
-                    target: schema.events.uuid,
+                    target: schema.events.tm_id,
                     set: {
                         name: ev.name,
                         subtitle: ev.subtitle,
