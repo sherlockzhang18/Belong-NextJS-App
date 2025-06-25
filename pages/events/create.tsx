@@ -4,7 +4,6 @@ import EventForm, { EventInput } from '../../components/EventForm'
 
 const Create: NextPage = () => {
     const handleSuccess = () => {
-        // after create you might re-fetch your list, or redirect
         alert('Event created! You can now edit it.')
     }
 

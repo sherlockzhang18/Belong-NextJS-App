@@ -80,6 +80,9 @@ export default async function handler(
         return res.status(400).json({ message: 'name, date & start_time are required' })
     }
 
+    const dbStart = start_time.length === 5 ? `${start_time}:00` : start_time
+    const dbEnd = end_time && end_time.length === 5 ? `${end_time}:00` : end_time
+
     try {
         if (req.method === 'POST') {
             await db
@@ -89,9 +92,8 @@ export default async function handler(
                     subtitle,
                     description,
                     date,
-                    end_date,
-                    start_time,
-                    end_time,
+                    start_time: dbStart,
+                    end_time: dbEnd,
                     location_name,
                     metadata: { description, files: images, images },
                     images
@@ -112,9 +114,8 @@ export default async function handler(
                     subtitle,
                     description,
                     date,
-                    end_date,
-                    start_time,
-                    end_time,
+                    start_time: dbStart,
+                    end_time: dbEnd,
                     location_name,
                     metadata: { description, files: images, images },
                     images
