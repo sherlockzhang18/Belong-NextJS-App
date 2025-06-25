@@ -1,21 +1,14 @@
 import React, { useState, useEffect, FormEvent } from 'react'
-import {
-    TextField,
-    Button,
-    Alert,
-    Stack,
-    Box,
-} from '@mui/material'
+import { TextField, Button, Alert, Stack, Box } from '@mui/material'
 
 export type EventInput = {
     uuid?: string
     name: string
     subtitle: string
     description: string
-    date: string
-    end_date: string
-    start_time: string
-    end_time: string
+    date: string        // YYYY-MM-DD
+    start_time: string  // HH:mm
+    end_time: string    // HH:mm
     location_name: string
     images: string[]
 }
@@ -31,22 +24,12 @@ export default function EventForm({ initial, onSuccess }: Props) {
         subtitle: '',
         description: '',
         date: '',
-        end_date: '',
         start_time: '',
         end_time: '',
         location_name: '',
         images: [],
         ...initial,
     })
-
-    useEffect(() => {
-        if (!initial) return
-        setInput(i => ({
-            ...i,
-            start_time: initial.start_time.replace('.', ':'),
-            end_time: initial.end_time.replace('.', ':'),
-        }))
-    }, [initial])
 
     const [rawImages, setRawImages] = useState(
         initial?.images.join(',') ?? ''
@@ -76,9 +59,6 @@ export default function EventForm({ initial, onSuccess }: Props) {
         setError(null)
         setSuccess(false)
 
-        if (input.end_date < input.date) {
-            return setError('End date cannot be before start date')
-        }
         if (input.end_time < input.start_time) {
             return setError('End time cannot be before start time')
         }
@@ -110,17 +90,8 @@ export default function EventForm({ initial, onSuccess }: Props) {
                 {error && <Alert severity="error">{error}</Alert>}
                 {success && <Alert severity="success">Saved!</Alert>}
 
-                <TextField
-                    label="Name"
-                    required
-                    value={input.name}
-                    onChange={handleChange('name')}
-                />
-                <TextField
-                    label="Subtitle"
-                    value={input.subtitle}
-                    onChange={handleChange('subtitle')}
-                />
+                <TextField label="Name" required value={input.name} onChange={handleChange('name')} />
+                <TextField label="Subtitle" value={input.subtitle} onChange={handleChange('subtitle')} />
                 <TextField
                     label="Description"
                     multiline
@@ -138,16 +109,6 @@ export default function EventForm({ initial, onSuccess }: Props) {
                         onChange={handleChange('date')}
                         InputLabelProps={{ shrink: true }}
                     />
-                    <TextField
-                        label="End Date"
-                        type="date"
-                        value={input.end_date}
-                        onChange={handleChange('end_date')}
-                        InputLabelProps={{ shrink: true }}
-                    />
-                </Stack>
-
-                <Stack direction="row" spacing={2}>
                     <TextField
                         label="Start Time"
                         type="time"
@@ -173,7 +134,7 @@ export default function EventForm({ initial, onSuccess }: Props) {
                 />
 
                 <TextField
-                    label="Image URLs (comma-separated, under /public)"
+                    label="Image URLs (comma-separated)"
                     value={rawImages}
                     onChange={e => setRawImages(e.target.value)}
                 />

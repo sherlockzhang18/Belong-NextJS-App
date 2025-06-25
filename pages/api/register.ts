@@ -24,7 +24,6 @@ export default async function handler(
         })
     }
 
-    // 1) Check for existing
     const existing = await db
         .select({ uuid: schema.users.uuid })
         .from(schema.users)
@@ -36,7 +35,6 @@ export default async function handler(
             .json({ message: 'Username already taken' })
     }
 
-    // 2) Hash & insert
     const passkey = await bcrypt.hash(password, 10)
     const inserted = await db
         .insert(schema.users)
@@ -49,7 +47,6 @@ export default async function handler(
 
     const userUuid = inserted[0]!.uuid
 
-    // 3) Sign & set cookie
     const token = jwt.sign({ uuid: userUuid, username }, process.env.JWT_SECRET as Secret)
     res.setHeader(
         'Set-Cookie',

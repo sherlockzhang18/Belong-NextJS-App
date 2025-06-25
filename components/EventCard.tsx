@@ -13,17 +13,11 @@ export default function EventCard({ event }: Props) {
     const firstImage = files?.[0] ?? event.getCoverImageLink()
 
     const dateStr = event.date?.format('MMM D, YYYY') || ''
-    const formatTime = (t: NonNullable<ChronosEvent['start_time']>) => {
-        const h = t.getHour()
-        const m = Math.round(t.getMinute() || 0)
-        return `${h}:${String(m).padStart(2, '0')}`
-    }
-    const timeStr =
-        event.start_time && event.end_time
-            ? `${formatTime(event.start_time)}–${formatTime(event.end_time)}`
-            : event.start_time
-                ? formatTime(event.start_time)
-                : ''
+    const timeStr = event.start_time
+        ? event.end_time
+            ? `${event.start_time.getDayjs().format('H:mm')}–${event.end_time.getDayjs().format('H:mm')}`
+            : event.start_time.getDayjs().format('H:mm')
+        : ''
 
     return (
         <div className="event-card">
