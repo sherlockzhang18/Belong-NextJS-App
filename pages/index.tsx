@@ -6,6 +6,7 @@ import Button from '@mui/material/Button'
 import { Event as ChronosEvent, dayjs } from '@jstiava/chronos'
 import EventCard from '../components/EventCard'
 import { useCurrentUser } from '../services/useCurrentUser'
+import { parseRawEvent, RawEvent } from '../services/eventUtils'
 
 export default function Home() {
     const router = useRouter()
@@ -15,21 +16,9 @@ export default function Home() {
     const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
-        axios
-            .get<{ events: any[] }>('/api/events')
-            .then(({ data }) => {
-                console.log('RAW times:', data.events.map(e => ({
-                    uuid: e.uuid,
-                    rawStart: e.start_time,
-                    rawEnd: e.end_time
-                })))
-
-                const wrapped = data.events.map(e => {
-                    const ev = new ChronosEvent(e, false)
-                    console.log(`EVENT ${ev.uuid} → HMN:`, ev.start_time?.getHMN(), ' Dayjs:', ev.start_time?.getDayjs().format('HH:mm:ss'))
-                    return ev
-                })
-
+        axios.get<{ events: RawEvent[] }>('/api/events')
+            .then(res => {
+                const wrapped = res.data.events.map(raw => parseRawEvent(raw))
                 setEvents(wrapped)
             })
             .catch(err => {
@@ -39,20 +28,23 @@ export default function Home() {
             .finally(() => setLoading(false))
     }, [])
 
+    const handleLogout = async () => {
+        try {
+            await axios.post('/api/logout', {}, { withCredentials: true })
+            refresh()
+            router.push('/login')
+        } catch (err) {
+            console.error('Logout failed', err)
+        }
+    }
+
     if (loading) return <p>Loading events…</p>
     if (error) return <p style={{ color: 'red' }}>Error: {error}</p>
 
     const today = dayjs().startOf('day')
-    console.log('Today:', today.format('YYYY-MM-DD'))
-
-    const upcoming = events.filter(e => {
-        const ds = e.date?.format('YYYY-MM-DD') ?? '<none>'
-        console.log(`Comparing event ${e.uuid} date=${ds}`,
-            'isSame?', e.date?.isSame(today, 'day'),
-            'isAfter?', e.date?.isAfter(today, 'day')
-        )
-        return e.date ? e.date.isSame(today, 'day') || e.date.isAfter(today, 'day') : false
-    })
+    const upcoming = events.filter(e =>
+        e.date ? e.date.isSame(today, 'day') || e.date.isAfter(today, 'day') : false
+    )
 
     return (
         <main>
@@ -66,10 +58,7 @@ export default function Home() {
                     </Button>
                 )}
                 {isAuthenticated && (
-                    <Button onClick={() => {
-                        axios.post('/api/logout', {}, { withCredentials: true })
-                            .then(() => { refresh(); router.push('/login') })
-                    }} variant="text" color="inherit">
+                    <Button onClick={handleLogout} variant="text" color="inherit">
                         Log Out
                     </Button>
                 )}

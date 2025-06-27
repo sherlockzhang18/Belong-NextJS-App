@@ -3,8 +3,7 @@ import {
     uuid,
     text,
     timestamp,
-    date,
-    time,
+    integer,
     numeric,
     jsonb,
 } from 'drizzle-orm/pg-core'
@@ -23,14 +22,14 @@ export const events = pgTable('events', {
     name: text('name').notNull(),
     subtitle: text('subtitle'),
     description: text('description'),
-    date: date('date').notNull(),
-    start_time: time('start_time').notNull(),
-    end_time: time('end_time').notNull(),
+    date: integer('date').notNull(),
+    end_date: integer('end_date'),
+    start_time: numeric('start_time', { precision: 5, scale: 3 }).notNull(),
+    end_time: numeric('end_time', { precision: 5, scale: 3 }),
     location_name: text('location_name'),
     metadata: jsonb('metadata').notNull(),
     images: jsonb('images').notNull().default('[]'),
     tm_id: text('tm_id').unique(),
 })
 
-export type NewUser = InferModel<typeof users, 'insert'>
 export type NewEvent = InferModel<typeof events, 'insert'>

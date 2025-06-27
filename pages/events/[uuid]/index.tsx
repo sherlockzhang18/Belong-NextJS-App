@@ -5,6 +5,7 @@ import Button from '@mui/material/Button'
 import axios from 'axios'
 import { Event as ChronosEvent } from '@jstiava/chronos'
 import { useCart } from '../../../services/useCart'
+import { parseRawEvent, RawEvent } from '../../../services/eventUtils'
 
 export default function EventDetail() {
     const router = useRouter()
@@ -15,36 +16,22 @@ export default function EventDetail() {
 
     useEffect(() => {
         if (typeof uuid !== 'string') return
-
-        axios.get<{ events: any[] }>('/api/events')
+        axios.get<{ events: RawEvent[] }>('/api/events')
             .then(res => {
                 const raw = res.data.events.find(e => e.uuid === uuid)
-                console.log('RAW event:', raw)
-
-                if (raw) {
-                    const ev = new ChronosEvent(raw, false)
-                    console.log(`WRAPPED ${ev.uuid} → HMN:`,
-                        ev.start_time?.getHMN(),
-                        ' Dayjs:',
-                        ev.start_time?.getDayjs().format('HH:mm:ss')
-                    )
-                    setEvent(ev)
-                } else {
-                    setEvent(null)
-                }
+                setEvent(raw ? parseRawEvent(raw) : null)
             })
             .catch(console.error)
             .finally(() => setLoading(false))
     }, [uuid])
 
     if (!router.isReady || loading) return <p>Loading…</p>
-    if (!event)
-        return (
-            <div>
-                <p>Event not found.</p>
-                <Button component={Link} href="/" variant="text">← Back</Button>
-            </div>
-        )
+    if (!event) return (
+        <div>
+            <p>Event not found.</p>
+            <Button component={Link} href="/" variant="text">← Back</Button>
+        </div>
+    )
 
     const dateStr = event.date?.format('MMMM D, YYYY') || ''
     const fmt = (t: NonNullable<ChronosEvent['start_time']>) =>
@@ -56,9 +43,15 @@ export default function EventDetail() {
                 ← Back to events
             </Button>
 
+            {/* image gallery */}
             <div className="detail-images">
                 {event.metadata?.files?.map((url, i) => (
-                    <img key={i} src={url} alt={`${event.name} #${i + 1}`} className="detail-img" />
+                    <img
+                        key={i}
+                        src={url}
+                        alt={`${event.name} #${i + 1}`}
+                        className="detail-img"
+                    />
                 ))}
             </div>
 
@@ -73,7 +66,11 @@ export default function EventDetail() {
                 <p className="detail-desc">{event.metadata.description}</p>
             )}
 
-            <Button variant="contained" sx={{ mt: 2 }} onClick={() => cart.add(event)}>
+            <Button
+                variant="contained"
+                sx={{ mt: 2 }}
+                onClick={() => cart.add(event)}
+            >
                 Add to cart
             </Button>
         </main>

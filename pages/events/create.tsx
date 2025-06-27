@@ -1,17 +1,11 @@
 import React from 'react'
-import { NextPage } from 'next'
 import EventForm from '../../components/EventForm'
 
-const CreatePage: NextPage = () => {
-    const handleSuccess = () => {
-        alert('Event created! You can now edit it.')
-    }
+export default function CreateEventPage() {
     return (
         <>
             <h1>Create Event</h1>
-            <EventForm onSuccess={handleSuccess} />
+            <EventForm onSuccess={() => alert('Created! You can now edit.')} />
         </>
     )
 }
-
-export default CreatePage

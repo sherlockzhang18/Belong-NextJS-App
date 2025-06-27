@@ -1,41 +1,42 @@
 import React, { useState, useEffect, FormEvent } from 'react'
-import { TextField, Button, Alert, Stack, Box } from '@mui/material'
+import {
+    Box,
+    Stack,
+    TextField,
+    Button,
+    Alert,
+} from '@mui/material'
+import { formatForApi } from '../services/eventUtils'
 
 export type EventInput = {
     uuid?: string
     name: string
     subtitle: string
     description: string
-    date: string        // YYYY-MM-DD
-    start_time: string  // HH:mm
-    end_time: string    // HH:mm
+    date: string
+    end_date: string
+    start_time: string
+    end_time: string
     location_name: string
     images: string[]
 }
 
 type Props = {
     initial?: EventInput
-    onSuccess: () => void
+    onSuccess(): void
 }
 
 export default function EventForm({ initial, onSuccess }: Props) {
     const [input, setInput] = useState<EventInput>({
-        name: '',
-        subtitle: '',
-        description: '',
-        date: '',
-        start_time: '',
-        end_time: '',
-        location_name: '',
-        images: [],
+        name: '', subtitle: '', description: '',
+        date: '', end_date: '',
+        start_time: '', end_time: '',
+        location_name: '', images: [],
         ...initial,
     })
-
-    const [rawImages, setRawImages] = useState(
-        initial?.images.join(',') ?? ''
-    )
-    const [error, setError] = useState<string | null>(null)
+    const [rawImages, setRawImages] = useState(initial?.images.join(',') ?? '')
     const [success, setSuccess] = useState(false)
+    const [error, setError] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
 
     useEffect(() => {
@@ -48,34 +49,34 @@ export default function EventForm({ initial, onSuccess }: Props) {
         }))
     }, [rawImages])
 
-    const handleChange = (field: keyof EventInput) => (
-        e: React.ChangeEvent<HTMLInputElement>
-    ) => {
-        setInput(i => ({ ...i, [field]: e.target.value }))
+    const handleChange = (f: keyof EventInput) => (e: React.ChangeEvent<HTMLInputElement>) => {
+        setInput(i => ({ ...i, [f]: e.target.value }))
     }
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault()
         setError(null)
-        setSuccess(false)
 
-        if (input.end_time < input.start_time) {
+        if (input.end_date && input.end_date < input.date) {
+            return setError('End date cannot be before start date')
+        }
+        if (input.end_time && input.end_time < input.start_time) {
             return setError('End time cannot be before start time')
         }
 
         setLoading(true)
         try {
+            const payload = formatForApi(input)
             const method = input.uuid ? 'PUT' : 'POST'
             const res = await fetch('/api/events', {
                 method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(input),
+                body: JSON.stringify(payload),
             })
             if (!res.ok) {
                 const { message } = await res.json()
                 throw new Error(message || res.statusText)
             }
-            setSuccess(true)
             onSuccess()
         } catch (err: any) {
             setError(err.message)
@@ -90,8 +91,17 @@ export default function EventForm({ initial, onSuccess }: Props) {
                 {error && <Alert severity="error">{error}</Alert>}
                 {success && <Alert severity="success">Saved!</Alert>}
 
-                <TextField label="Name" required value={input.name} onChange={handleChange('name')} />
-                <TextField label="Subtitle" value={input.subtitle} onChange={handleChange('subtitle')} />
+                <TextField
+                    label="Name"
+                    required
+                    value={input.name}
+                    onChange={handleChange('name')}
+                />
+                <TextField
+                    label="Subtitle"
+                    value={input.subtitle}
+                    onChange={handleChange('subtitle')}
+                />
                 <TextField
                     label="Description"
                     multiline
@@ -107,6 +117,14 @@ export default function EventForm({ initial, onSuccess }: Props) {
                         required
                         value={input.date}
                         onChange={handleChange('date')}
+                        InputLabelProps={{ shrink: true }}
+                    />
+                    <TextField
+                        label="End Date"
+                        type="date"
+                        required
+                        value={input.end_date}
+                        onChange={handleChange('end_date')}
                         InputLabelProps={{ shrink: true }}
                     />
                     <TextField

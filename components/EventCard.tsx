@@ -6,9 +6,10 @@ import Button from '@mui/material/Button'
 
 type Props = {
     event: ChronosEvent
+    editMode?: boolean
 }
 
-export default function EventCard({ event }: Props) {
+export default function EventCard({ event, editMode = false }: Props) {
     const files = event.metadata?.files as string[] | undefined
     const firstImage = files?.[0] ?? event.getCoverImageLink()
 
@@ -26,9 +27,8 @@ export default function EventCard({ event }: Props) {
                     <Image
                         src={firstImage}
                         alt={event.name}
-                        layout="fill"
-                        objectFit="cover"
-                        className="cover-image"
+                        fill
+                        style={{ objectFit: 'cover' }}
                     />
                 </div>
             )}
@@ -43,10 +43,7 @@ export default function EventCard({ event }: Props) {
                     {dateStr}
                     {timeStr && ` • ${timeStr}`}
                 </p>
-                <p className="event-info">
-                    {event.location_name}
-                    {event.metadata?.price && ` • $${event.metadata.price}`}
-                </p>
+                <p className="event-info">{event.location_name}</p>
 
                 <Button
                     component={Link}
@@ -58,6 +55,18 @@ export default function EventCard({ event }: Props) {
                 >
                     View Details
                 </Button>
+
+                {editMode && (
+                    <Button
+                        component={Link}
+                        href={`/events/${event.uuid}/edit`}
+                        variant="outlined"
+                        size="small"
+                        sx={{ mt: 1 }}
+                    >
+                        Edit
+                    </Button>
+                )}
             </div>
         </div>
     )
