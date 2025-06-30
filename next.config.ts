@@ -18,11 +18,30 @@ const nextConfig: NextConfig = {
     },
 
     images: {
-        domains: [
-            'localhost',
-            'your-production-domain.com',
-            's1.ticketm.net',
-            'utfs.io',
+        remotePatterns: [
+            // uploadthing
+            {
+                protocol: 'https',
+                hostname: 'utfs.io',
+                port: '',
+                pathname: '/**',
+            },
+
+            // ticketmaster
+            {
+                protocol: 'https',
+                hostname: 's1.ticketm.net',
+                port: '',
+                pathname: '/**',
+            },
+
+            // localhost
+            {
+                protocol: 'http',
+                hostname: 'localhost',
+                port: '3000',
+                pathname: '/**',
+            },
         ],
     },
 }
