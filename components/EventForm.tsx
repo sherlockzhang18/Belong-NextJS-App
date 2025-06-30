@@ -1,38 +1,29 @@
 import React, { useState, useEffect, FormEvent } from 'react'
 import { Box, Stack, TextField, Button, Alert } from '@mui/material'
-import { formatForApi } from '../services/eventUtils'
-
-export type EventInput = {
-    uuid?: string
-    name: string
-    subtitle: string
-    description: string
-    date: string
-    end_date: string
-    start_time: string
-    end_time: string
-    location_name: string
-    images: string[]
-    price?: string
-    ticketing_link?: string
-}
+import type { EventInput } from '../services/eventUtils'
 
 type Props = {
     initial?: EventInput
-    onSuccess(): void
+    onSubmit(values: EventInput): Promise<void>
+    onSuccess?(): void
 }
 
-export default function EventForm({ initial, onSuccess }: Props) {
+export default function EventForm({ initial, onSubmit, onSuccess }: Props) {
     const [input, setInput] = useState<EventInput>({
-        name: '', subtitle: '', description: '',
-        date: '', end_date: '',
-        start_time: '', end_time: '',
-        location_name: '', images: [],
-        price: '', ticketing_link: '',
+        name: '',
+        subtitle: '',
+        description: '',
+        date: '',
+        end_date: '',
+        start_time: '',
+        end_time: '',
+        location_name: '',
+        images: [],
+        price: '',
+        ticketing_link: '',
         ...initial,
     })
     const [rawImages, setRawImages] = useState(initial?.images.join(',') ?? '')
-    const [success, setSuccess] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
 
@@ -65,20 +56,10 @@ export default function EventForm({ initial, onSuccess }: Props) {
 
         setLoading(true)
         try {
-            const payload = formatForApi(input)
-            const method = input.uuid ? 'PUT' : 'POST'
-            const res = await fetch('/api/events', {
-                method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-            })
-            if (!res.ok) {
-                const { message } = await res.json()
-                throw new Error(message || res.statusText)
-            }
-            onSuccess()
+            await onSubmit(input)
+            onSuccess?.()
         } catch (err: any) {
-            setError(err.message)
+            setError(err.message || 'Submission failed')
         } finally {
             setLoading(false)
         }
@@ -88,7 +69,6 @@ export default function EventForm({ initial, onSuccess }: Props) {
         <Box component="form" onSubmit={handleSubmit} sx={{ maxWidth: 600, mx: 'auto' }}>
             <Stack spacing={2}>
                 {error && <Alert severity="error">{error}</Alert>}
-                {success && <Alert severity="success">Saved!</Alert>}
 
                 <TextField label="Name" required
                     value={input.name}
@@ -130,23 +110,21 @@ export default function EventForm({ initial, onSuccess }: Props) {
                     value={input.location_name}
                     onChange={handleChange('location_name')}
                 />
-
                 <TextField label="Image URLs (comma-separated)"
                     value={rawImages}
                     onChange={e => setRawImages(e.target.value)}
                 />
-
                 <TextField label="Price"
-                    value={input.price ?? ''}
+                    value={input.price}
                     onChange={handleChange('price')}
                 />
                 <TextField label="Ticketing Link"
-                    value={input.ticketing_link ?? ''}
+                    value={input.ticketing_link}
                     onChange={handleChange('ticketing_link')}
                 />
 
                 <Button type="submit" variant="contained" disabled={loading}>
-                    {input.uuid ? 'Update Event' : 'Create Event'}
+                    {initial ? 'Update Event' : 'Create Event'}
                 </Button>
             </Stack>
         </Box>

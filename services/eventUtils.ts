@@ -1,8 +1,22 @@
 import { Event as ChronosEvent } from '@jstiava/chronos'
 import type { EventPayload } from '../pages/api/events'
-import type { EventInput } from '../components/EventForm'
 
 export type RawEvent = EventPayload
+
+export type EventInput = {
+    uuid?: string
+    name: string
+    subtitle: string
+    description: string
+    date: string
+    end_date: string
+    start_time: string
+    end_time: string
+    location_name: string
+    images: string[]
+    price?: string
+    ticketing_link?: string
+}
 
 export function parseRawEvent(
     raw: RawEvent,
