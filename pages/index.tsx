@@ -52,13 +52,16 @@ export default function Home() {
                 <Button component={Link} href="/cart" variant="contained" color="primary">
                     View Cart
                 </Button>
+                <Button component={Link} href="/events/create" variant="contained" color="primary">
+                    Create Event
+                </Button>
                 {isAdmin && (
                     <Button component={Link} href="/admin" variant="outlined" color="secondary">
                         Admin Dashboard
                     </Button>
                 )}
                 {isAuthenticated && (
-                    <Button onClick={handleLogout} variant="text" color="inherit">
+                    <Button onClick={handleLogout} variant="outlined" color="inherit">
                         Log Out
                     </Button>
                 )}

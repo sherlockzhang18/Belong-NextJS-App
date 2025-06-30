@@ -37,22 +37,35 @@ export default function EventDetail() {
     const fmt = (t: NonNullable<ChronosEvent['start_time']>) =>
         t.getDayjs().format('H:mm')
 
+    const firstImage = Array.isArray(event.metadata?.files) && event.metadata.files.length > 0
+        ? event.metadata.files[0]
+        : null
+
     return (
-        <main className="event-detail">
+        <main className="event-detail" style={{ padding: '1rem' }}>
             <Button component={Link} href="/" variant="text" sx={{ mb: 2 }}>
                 ← Back to events
             </Button>
 
-            <div className="detail-images">
-                {event.metadata?.files?.map((url, i) => (
+            {/* only one image, constrained in size */}
+            {firstImage && (
+                <div style={{
+                    width: '100%',
+                    maxWidth: 600,
+                    margin: '0 auto 1.5rem',
+                }}>
                     <img
-                        key={i}
-                        src={url}
-                        alt={`${event.name} #${i + 1}`}
-                        className="detail-img"
+                        src={firstImage}
+                        alt={event.name}
+                        style={{
+                            display: 'block',
+                            width: '100%',
+                            height: 'auto',
+                            borderRadius: 8,
+                        }}
                     />
-                ))}
-            </div>
+                </div>
+            )}
 
             <h1>{event.name}</h1>
             <p>
@@ -66,12 +79,12 @@ export default function EventDetail() {
                 <p className="detail-desc">{event.metadata.description}</p>
             )}
             {event.metadata?.price && (
-                <p><strong>Price:</strong> {event.metadata.price}</p>
+                <p><strong>Price:&nbsp;</strong>{event.metadata.price}</p>
             )}
             {event.metadata?.ticketing_link && (
                 <Button
-                    variant="outlined"
-                    sx={{ mt: 1 }}
+                    variant="contained"
+                    sx={{ mt: 2 }}
                     component="a"
                     href={event.metadata.ticketing_link}
                     target="_blank"
@@ -82,10 +95,19 @@ export default function EventDetail() {
 
             <Button
                 variant="contained"
-                sx={{ mt: 2 }}
+                sx={{ mt: 1 }}
                 onClick={() => cart.add(event)}
             >
                 Add to cart
+            </Button>
+            <Button
+                component={Link}
+                href={`/events/${event.uuid}/edit`}
+                variant="outlined"
+                size="small"
+                sx={{ mt: 5 }}
+            >
+                Edit
             </Button>
         </main>
     )

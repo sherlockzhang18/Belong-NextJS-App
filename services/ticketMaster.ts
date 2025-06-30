@@ -7,14 +7,14 @@ const PAGE_SIZE = 30
 
 export async function fetchTicketMasterRaw(): Promise<any> {
     const res = await axios.get(`${BASE_URL}/events.json`, {
-        params: { apikey: API_KEY, classificationName: 'music', size: PAGE_SIZE },
+        params: { apikey: API_KEY, classificationName: 'NBA', size: PAGE_SIZE },
     })
     return res.data
 }
 
 export async function fetchTicketMasterEvents(): Promise<NewEvent[]> {
     const listRes = await axios.get(`${BASE_URL}/events.json`, {
-        params: { apikey: API_KEY, size: PAGE_SIZE, locale: 'en-us' },
+        params: { apikey: API_KEY, classificationName: 'NBA', size: PAGE_SIZE, locale: 'en-us' },
     })
     const items = (listRes.data._embedded?.events as any[]) || []
     const seen = new Set<string>()
@@ -33,7 +33,7 @@ export async function fetchTicketMasterEvents(): Promise<NewEvent[]> {
             })
             full = detail.data
         }
-        catch {}
+        catch { }
 
         const dateStr = full.dates?.start?.localDate ?? '1970-01-01'
         const dateNum = parseInt(dateStr.replace(/-/g, ''), 10)
@@ -44,13 +44,13 @@ export async function fetchTicketMasterEvents(): Promise<NewEvent[]> {
             (ss || '00').padStart(2, '0')].join(':')
             : '00:00:00'
 
-        let endTimeStr = startTimeStr
-        if (full.sales?.public?.endDateTime) {
-            const dt = new Date(full.sales.public.endDateTime)
+        let endTimeStr: string | null = null
+        if (full.dates?.end?.localTime) {
+            const [eh, em, es] = full.dates.end.localTime.split(':')
             endTimeStr = [
-                dt.getHours().toString().padStart(2, '0'),
-                dt.getMinutes().toString().padStart(2, '0'),
-                dt.getSeconds().toString().padStart(2, '0'),
+                eh.padStart(2, '0'),
+                em.padStart(2, '0'),
+                (es || '00').padStart(2, '0'),
             ].join(':')
         }
 
@@ -73,7 +73,7 @@ export async function fetchTicketMasterEvents(): Promise<NewEvent[]> {
 
         const description = full.info || full.description || null
         const venue = full._embedded?.venues?.[0]?.name ?? null
-        
+
         const metadata: Record<string, any> = {
             event_link: full.url ?? null,
         }
@@ -88,7 +88,7 @@ export async function fetchTicketMasterEvents(): Promise<NewEvent[]> {
             subtitle: null,
             date: dateNum,
             start_time: toFrac(startTimeStr),
-            end_time: toFrac(endTimeStr),
+            end_time: endTimeStr ? toFrac(endTimeStr) : null,
             location_name: venue,
             metadata,
         } as NewEvent)
