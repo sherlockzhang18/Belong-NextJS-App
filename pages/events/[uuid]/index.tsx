@@ -43,7 +43,6 @@ export default function EventDetail() {
                 ← Back to events
             </Button>
 
-            {/* image gallery */}
             <div className="detail-images">
                 {event.metadata?.files?.map((url, i) => (
                     <img
@@ -62,8 +61,23 @@ export default function EventDetail() {
                 {event.end_time && `–${fmt(event.end_time)}`}
             </p>
             {event.location_name && <p>{event.location_name}</p>}
+
             {event.metadata?.description && (
                 <p className="detail-desc">{event.metadata.description}</p>
+            )}
+            {event.metadata?.price && (
+                <p><strong>Price:</strong> {event.metadata.price}</p>
+            )}
+            {event.metadata?.ticketing_link && (
+                <Button
+                    variant="outlined"
+                    sx={{ mt: 1 }}
+                    component="a"
+                    href={event.metadata.ticketing_link}
+                    target="_blank"
+                >
+                    Buy Tickets
+                </Button>
             )}
 
             <Button

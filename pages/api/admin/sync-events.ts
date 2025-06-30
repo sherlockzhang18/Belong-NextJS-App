@@ -1,65 +1,84 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
+import { eq } from 'drizzle-orm'
 import { getUserFromReq } from '../../../utils/auth'
 import { db, schema } from '../../../utils/db'
 import { fetchTicketMasterEvents } from '../../../services/ticketMaster'
-import { sql } from 'drizzle-orm'
 
 export default async function handler(
     req: NextApiRequest,
-    res: NextApiResponse
+    res: NextApiResponse<{ synced: number } | { error: string }>
 ) {
     const user = await getUserFromReq(req, res)
     if (!user || user.role !== 'admin') {
         return res.status(403).json({ error: 'Forbidden' })
     }
-
     if (req.method !== 'POST') {
         res.setHeader('Allow', ['POST'])
-        return res.status(405).end()
+        return res.status(405).json({ error: 'Method Not Allowed' })
     }
 
     try {
-        const events = await fetchTicketMasterEvents()
+        const rows = await db
+            .select({
+                uuid: schema.events.uuid,
+                metadata: schema.events.metadata,
+            })
+            .from(schema.events)
+
+        const existingMap = new Map<string, string>()
+        for (const row of rows) {
+            const tl = (row.metadata as any)?.ticketing_link
+            if (typeof tl === 'string') {
+                existingMap.set(tl, row.uuid)
+            }
+        }
+
+        const tmevents = await fetchTicketMasterEvents()
         let synced = 0
 
-        for (const ev of events) {
-            await db
-                .insert(schema.events)
-                .values({
-                    tm_id: ev.uuid,
-                    name: ev.name,
-                    subtitle: ev.subtitle,
-                    description: ev.description,
-                    date: ev.date,
-                    start_time: ev.start_time,
-                    end_time: ev.end_time,
-                    location_name: ev.location_name,
-                    price: ev.price ?? '0.00',
-                    metadata: {
-                        ...ev.metadata,
-                        files: ev.images,
-                    },
-                })
-                .onConflictDoUpdate({
-                    target: schema.events.tm_id,
-                    set: {
+        for (const ev of tmevents) {
+            if (!ev.uuid) continue
+            const ticketLink = ev.uuid
+            const baseMeta =
+                ev.metadata && typeof ev.metadata === 'object'
+                    ? (ev.metadata as Record<string, any>)
+                    : {}
+            const metadata = {
+                ...baseMeta,
+                ticketing_link: ticketLink,
+            }
+
+            if (existingMap.has(ticketLink)) {
+                const rowUuid = existingMap.get(ticketLink)!
+                await db
+                    .update(schema.events)
+                    .set({
                         name: ev.name,
-                        subtitle: ev.subtitle,
-                        description: ev.description,
+                        subtitle: ev.subtitle ?? null,
                         date: ev.date,
+                        end_date: ev.end_date ?? null,
                         start_time: ev.start_time,
-                        end_time: ev.end_time,
-                        location_name: ev.location_name,
-                        price: ev.price ?? '0.00',
-                        metadata: sql`
-              "events"."metadata"
-              || jsonb_build_object(
-                   'files', ${JSON.stringify(ev.images)}::jsonb
-                 )
-            `,
-                    },
-                })
-                .execute()
+                        end_time: ev.end_time ?? null,
+                        location_name: ev.location_name ?? null,
+                        metadata,
+                    })
+                    .where(eq(schema.events.uuid, rowUuid))
+                    .execute()
+            } else {
+                await db
+                    .insert(schema.events)
+                    .values({
+                        name: ev.name,
+                        subtitle: ev.subtitle ?? null,
+                        date: ev.date,
+                        end_date: ev.end_date ?? null,
+                        start_time: ev.start_time,
+                        end_time: ev.end_time ?? null,
+                        location_name: ev.location_name ?? null,
+                        metadata,
+                    })
+                    .execute()
+            }
 
             synced++
         }

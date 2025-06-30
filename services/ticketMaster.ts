@@ -5,7 +5,6 @@ const API_KEY = process.env.TM_API_KEY!
 const BASE_URL = 'https://app.ticketmaster.com/discovery/v2'
 const PAGE_SIZE = 30
 
-/** Raw unmodified TM JSON payload */
 export async function fetchTicketMasterRaw(): Promise<any> {
     const res = await axios.get(`${BASE_URL}/events.json`, {
         params: { apikey: API_KEY, classificationName: 'music', size: PAGE_SIZE },
@@ -13,10 +12,6 @@ export async function fetchTicketMasterRaw(): Promise<any> {
     return res.data
 }
 
-/**
- * Normalize up to 30 TM events into exactly the shape
- * your `events` table needs (no top-level price column).
- */
 export async function fetchTicketMasterEvents(): Promise<NewEvent[]> {
     const listRes = await axios.get(`${BASE_URL}/events.json`, {
         params: { apikey: API_KEY, size: PAGE_SIZE, locale: 'en-us' },
@@ -37,27 +32,35 @@ export async function fetchTicketMasterEvents(): Promise<NewEvent[]> {
                 params: { apikey: API_KEY, locale: 'en-us' },
             })
             full = detail.data
-        } catch {
         }
+        catch {}
 
         const dateStr = full.dates?.start?.localDate ?? '1970-01-01'
+        const dateNum = parseInt(dateStr.replace(/-/g, ''), 10)
         const [sh, sm, ss] = (full.dates?.start?.localTime || '').split(':')
-        const startTime = full.dates?.start?.localTime
-            ? [sh.padStart(2, '0'), sm.padStart(2, '0'), (ss || '00').padStart(2, '0')].join(':')
+        const startTimeStr = full.dates?.start?.localTime
+            ? [sh.padStart(2, '0'),
+            sm.padStart(2, '0'),
+            (ss || '00').padStart(2, '0')].join(':')
             : '00:00:00'
 
-        let endTime = startTime
-        const endIso = full.sales?.public?.endDateTime
-        if (endIso) {
-            const dt = new Date(endIso)
-            const hh = dt.getHours().toString().padStart(2, '0')
-            const mm = dt.getMinutes().toString().padStart(2, '0')
-            const ss2 = dt.getSeconds().toString().padStart(2, '0')
-            endTime = `${hh}:${mm}:${ss2}`
+        let endTimeStr = startTimeStr
+        if (full.sales?.public?.endDateTime) {
+            const dt = new Date(full.sales.public.endDateTime)
+            endTimeStr = [
+                dt.getHours().toString().padStart(2, '0'),
+                dt.getMinutes().toString().padStart(2, '0'),
+                dt.getSeconds().toString().padStart(2, '0'),
+            ].join(':')
+        }
+
+        const toFrac = (hms: string): string => {
+            const [h, m, s] = hms.split(':').map(Number)
+            return (h + m / 60 + s / 3600).toFixed(3)
         }
 
         let priceStr: string | null = null
-        if (Array.isArray(full.priceRanges)?.[0]) {
+        if (Array.isArray(full.priceRanges) && full.priceRanges.length > 0) {
             const pr = full.priceRanges[0]
             priceStr = pr.min === pr.max
                 ? pr.min.toFixed(2)
@@ -66,26 +69,28 @@ export async function fetchTicketMasterEvents(): Promise<NewEvent[]> {
 
         const tmImages: string[] = (full.images as any[] || [])
             .slice(0, 3)
-            .map((img: any) => img.url)
+            .map(img => img.url)
 
         const description = full.info || full.description || null
         const venue = full._embedded?.venues?.[0]?.name ?? null
+        
+        const metadata: Record<string, any> = {
+            event_link: full.url ?? null,
+        }
+        if (priceStr) metadata.price = priceStr
+        if (description) metadata.description = description
+        if (tmImages.length) metadata.files = tmImages
+        metadata.ticketing_link = full.id
 
         detailed.push({
             uuid: full.id,
             name: full.name,
             subtitle: null,
-            description,
-            date: dateStr,
-            start_time: startTime,
-            end_time: endTime,
+            date: dateNum,
+            start_time: toFrac(startTimeStr),
+            end_time: toFrac(endTimeStr),
             location_name: venue,
-            metadata: {
-                ...(priceStr && { price: priceStr }),
-                ...(description && { description }),
-                event_link: full.url ?? null,
-            },
-            images: tmImages,
+            metadata,
         } as NewEvent)
     }
 

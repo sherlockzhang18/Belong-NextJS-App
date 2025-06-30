@@ -1,11 +1,5 @@
 import React, { useState, useEffect, FormEvent } from 'react'
-import {
-    Box,
-    Stack,
-    TextField,
-    Button,
-    Alert,
-} from '@mui/material'
+import { Box, Stack, TextField, Button, Alert } from '@mui/material'
 import { formatForApi } from '../services/eventUtils'
 
 export type EventInput = {
@@ -19,6 +13,8 @@ export type EventInput = {
     end_time: string
     location_name: string
     images: string[]
+    price?: string
+    ticketing_link?: string
 }
 
 type Props = {
@@ -32,6 +28,7 @@ export default function EventForm({ initial, onSuccess }: Props) {
         date: '', end_date: '',
         start_time: '', end_time: '',
         location_name: '', images: [],
+        price: '', ticketing_link: '',
         ...initial,
     })
     const [rawImages, setRawImages] = useState(initial?.images.join(',') ?? '')
@@ -49,7 +46,9 @@ export default function EventForm({ initial, onSuccess }: Props) {
         }))
     }, [rawImages])
 
-    const handleChange = (f: keyof EventInput) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = (f: keyof EventInput) => (
+        e: React.ChangeEvent<HTMLInputElement>
+    ) => {
         setInput(i => ({ ...i, [f]: e.target.value }))
     }
 
@@ -91,70 +90,59 @@ export default function EventForm({ initial, onSuccess }: Props) {
                 {error && <Alert severity="error">{error}</Alert>}
                 {success && <Alert severity="success">Saved!</Alert>}
 
-                <TextField
-                    label="Name"
-                    required
+                <TextField label="Name" required
                     value={input.name}
                     onChange={handleChange('name')}
                 />
-                <TextField
-                    label="Subtitle"
+                <TextField label="Subtitle"
                     value={input.subtitle}
                     onChange={handleChange('subtitle')}
                 />
-                <TextField
-                    label="Description"
-                    multiline
-                    rows={3}
+                <TextField label="Description" multiline rows={3}
                     value={input.description}
                     onChange={handleChange('description')}
                 />
 
                 <Stack direction="row" spacing={2}>
-                    <TextField
-                        label="Date"
-                        type="date"
-                        required
+                    <TextField label="Date" type="date" required
                         value={input.date}
                         onChange={handleChange('date')}
                         InputLabelProps={{ shrink: true }}
                     />
-                    <TextField
-                        label="End Date"
-                        type="date"
-                        required
+                    <TextField label="End Date" type="date"
                         value={input.end_date}
                         onChange={handleChange('end_date')}
                         InputLabelProps={{ shrink: true }}
                     />
-                    <TextField
-                        label="Start Time"
-                        type="time"
-                        required
+                    <TextField label="Start Time" type="time" required
                         value={input.start_time}
                         onChange={handleChange('start_time')}
                         InputLabelProps={{ shrink: true }}
                     />
-                    <TextField
-                        label="End Time"
-                        type="time"
-                        required
+                    <TextField label="End Time" type="time"
                         value={input.end_time}
                         onChange={handleChange('end_time')}
                         InputLabelProps={{ shrink: true }}
                     />
                 </Stack>
 
-                <TextField
-                    label="Location Name"
+                <TextField label="Location Name"
                     value={input.location_name}
                     onChange={handleChange('location_name')}
                 />
 
-                <TextField
-                    label="Image URLs (comma-separated)"
+                <TextField label="Image URLs (comma-separated)"
                     value={rawImages}
                     onChange={e => setRawImages(e.target.value)}
+                />
+
+                <TextField label="Price"
+                    value={input.price ?? ''}
+                    onChange={handleChange('price')}
+                />
+                <TextField label="Ticketing Link"
+                    value={input.ticketing_link ?? ''}
+                    onChange={handleChange('ticketing_link')}
                 />
 
                 <Button type="submit" variant="contained" disabled={loading}>

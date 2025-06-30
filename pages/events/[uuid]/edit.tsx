@@ -29,6 +29,10 @@ export const getServerSideProps: GetServerSideProps = async ({ params, req }) =>
     const formatDate = (d: any) => d.format('YYYY-MM-DD')
     const formatTime = (t: any) => t.getDayjs().format('HH:mm')
 
+    const files = Array.isArray(raw.metadata?.files)
+        ? (raw.metadata.files as string[])
+        : []
+
     const initial: EventInput = {
         uuid: ev.uuid,
         name: ev.name,
@@ -39,7 +43,7 @@ export const getServerSideProps: GetServerSideProps = async ({ params, req }) =>
         start_time: ev.start_time ? formatTime(ev.start_time) : '',
         end_time: ev.end_time ? formatTime(ev.end_time) : '',
         location_name: ev.location_name ?? '',
-        images: raw.images,
+        images: files,
     }
 
     return { props: { initial } }

@@ -38,7 +38,22 @@ export default function EventCard({ event, editMode = false }: Props) {
                 {event.metadata?.description && (
                     <p className="event-description">{event.metadata.description}</p>
                 )}
-
+                {event.metadata?.price && (
+                    <p className="event-price">
+                        <strong>Price:</strong> {event.metadata.price}
+                    </p>
+                )}
+                {event.metadata?.ticketing_link && (
+                    <Button
+                        component="a"
+                        href={event.metadata.ticketing_link}
+                        target="_blank"
+                        fullWidth
+                        sx={{ mt: 1 }}
+                    >
+                        Buy Tickets
+                    </Button>
+                )}
                 <p className="event-info">
                     {dateStr}
                     {timeStr && ` • ${timeStr}`}
