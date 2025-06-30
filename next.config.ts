@@ -19,12 +19,10 @@ const nextConfig: NextConfig = {
 
     images: {
         domains: [
-            // your local dev host
             'localhost',
-            // your production domain (replace accordingly)
             'your-production-domain.com',
-            // allow Ticketmaster CDN
             's1.ticketm.net',
+            'utfs.io',
         ],
     },
 }
