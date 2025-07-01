@@ -43,11 +43,14 @@ export default function EventForm({ initial, onSubmit, onSuccess }: Props) {
         e.preventDefault()
         setError(null)
 
-        if (input.end_date && input.end_date < input.date) {
-            return setError('End date cannot be before start date')
+        if (input.end_date) {
+            if (input.end_date <= input.date) {
+                return setError('End date must be after start date')
+            }
         }
-        if (input.end_time && input.end_time < input.start_time) {
-            return setError('End time cannot be before start time')
+
+        if (!input.end_date && input.end_time && input.end_time < input.start_time) {
+            return setError('End time cannot be before start time when using a single-day event')
         }
 
         setLoading(true)
