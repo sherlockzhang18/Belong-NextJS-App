@@ -14,7 +14,7 @@ export async function fetchTicketMasterRaw(): Promise<any> {
 
 export async function fetchTicketMasterEvents(): Promise<NewEvent[]> {
     const listRes = await axios.get(`${BASE_URL}/events.json`, {
-        params: { apikey: API_KEY, classificationName: 'NBA', size: PAGE_SIZE, locale: 'en-us' },
+        params: { apikey: API_KEY, classificationName: 'music', size: PAGE_SIZE, locale: 'en-us' },
     })
     const items = (listRes.data._embedded?.events as any[]) || []
     const seen = new Set<string>()

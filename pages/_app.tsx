@@ -1,3 +1,4 @@
+// import '@mui/x-data-grid/styles';
 import "@/styles/globals.scss";
 import type { AppProps } from "next/app";
 import RouteGuard from "@/components/RouteGuard";
@@ -23,7 +24,7 @@ const theme = createTheme({
 export default function MyApp({ Component, pageProps }: AppProps) {
     return (
         <ThemeProvider theme={theme}>
-            <CssBaseline />
+            {/* <CssBaseline /> */}
             <RouteGuard>
                 <Component {...pageProps} />
             </RouteGuard>
