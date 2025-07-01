@@ -37,6 +37,11 @@ export default function EventDetail() {
     const fmt = (t: NonNullable<ChronosEvent['start_time']>) =>
         t.getDayjs().format('H:mm')
 
+    const rawPrice = event.metadata?.price
+    const displayPrice = rawPrice && !isNaN(parseFloat(rawPrice))
+        ? `$${parseFloat(rawPrice).toFixed(2)}`
+        : null
+
     const firstImage = Array.isArray(event.metadata?.files) && event.metadata.files.length > 0
         ? event.metadata.files[0]
         : null
@@ -79,7 +84,7 @@ export default function EventDetail() {
                 <p className="detail-desc">{event.metadata.description}</p>
             )}
             {event.metadata?.price && (
-                <p><strong>Price:&nbsp;</strong>{event.metadata.price}</p>
+                <p><strong>Price:&nbsp;</strong>{displayPrice}</p>
             )}
             {event.metadata?.ticketing_link && (
                 <Button

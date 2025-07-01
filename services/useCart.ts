@@ -1,5 +1,3 @@
-// File: services/useCart.ts
-
 import { useState, useEffect } from 'react'
 import type { Event as ChronosEvent, EventData } from '@jstiava/chronos'
 import { Event } from '@jstiava/chronos'
@@ -14,7 +12,6 @@ export type CartItem = {
 export function useCart() {
     const [items, setItems] = useState<CartItem[]>([])
 
-    // Load persisted cart on mount
     useEffect(() => {
         try {
             const data = localStorage.getItem(STORAGE_KEY)
@@ -31,7 +28,6 @@ export function useCart() {
         }
     }, [])
 
-    // Persist cart whenever it changes
     useEffect(() => {
         try {
             const toStore = items.map(({ event, quantity }) => ({
@@ -75,7 +71,6 @@ export function useCart() {
     }
 
     const totalPrice = items.reduce((sum, { event, quantity }) => {
-        // metadata.price like "$49"
         const raw = event.metadata?.price?.toString().replace(/[^0-9.]/g, '') || '0'
         const num = parseFloat(raw) || 0
         return sum + num * quantity

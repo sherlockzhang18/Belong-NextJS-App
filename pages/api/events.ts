@@ -1,15 +1,8 @@
-// File: pages/api/events.ts
-
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { db, schema } from '../../utils/db'
 import { eq } from 'drizzle-orm'
 import { getUserFromReq } from '../../utils/auth'
 
-/**
- * We’ve removed `description`, `images`, and `tm_id` here,
- * and left only the fields that still live as real columns—
- * plus a catch-all `metadata: any` for everything else.
- */
 export type EventPayload = {
     uuid: string
     name: string
@@ -26,10 +19,8 @@ export default async function handler(
     req: NextApiRequest,
     res: NextApiResponse<{ events: EventPayload[] } | { message: string }>
 ) {
-    // ─── READ ───
     if (req.method === 'GET') {
         try {
-            // only select your real columns + metadata
             const rows = await db
                 .select({
                     uuid: schema.events.uuid,
@@ -45,7 +36,6 @@ export default async function handler(
                 .from(schema.events)
                 .orderBy(schema.events.date, schema.events.start_time)
 
-            // map directly into our slimmed‐down payload type
             const events: EventPayload[] = rows.map(r => ({
                 uuid: r.uuid,
                 name: r.name,
@@ -65,14 +55,11 @@ export default async function handler(
         }
     }
 
-    // ─── WRITE (POST / PUT) ───
-    // admin guard
     const user = await getUserFromReq(req, res)
     if (!user || user.role !== 'admin') {
         return res.status(403).json({ message: 'Unauthorized' })
     }
 
-    // enforce required fields
     const body = req.body as Partial<EventPayload> & {
         name: string
         date: number
@@ -83,10 +70,9 @@ export default async function handler(
     }
 
     try {
-        // ─── CREATE ───
         if (req.method === 'POST') {
             await db.insert(schema.events).values({
-                uuid: body.uuid,           // if you omit this, PG defaultRandom() kicks in
+                uuid: body.uuid,
                 name: body.name,
                 subtitle: body.subtitle ?? null,
                 date: body.date,
@@ -100,7 +86,6 @@ export default async function handler(
             return res.status(201).json({ message: 'Created' })
         }
 
-        // ─── UPDATE ───
         if (req.method === 'PUT') {
             if (!body.uuid) {
                 return res.status(400).json({ message: 'UUID required for update' })
@@ -123,7 +108,6 @@ export default async function handler(
             return res.status(200).json({ message: 'Updated' })
         }
 
-        // disallow other methods
         res.setHeader('Allow', ['GET', 'POST', 'PUT'])
         return res.status(405).end(`Method ${req.method} Not Allowed`)
     } catch (err: any) {

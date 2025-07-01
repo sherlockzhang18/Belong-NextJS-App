@@ -29,4 +29,19 @@ export const events = pgTable('events', {
     metadata: jsonb('metadata').notNull(),
 })
 
+export const ticketOptions = pgTable('ticket_options', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    event_id: uuid('event_id').notNull().references(() => events.uuid),
+    name: text('name').notNull(),
+    price: numeric('price', { precision: 10, scale: 2 }).notNull(),
+    quantity: integer('quantity').notNull().default(1),
+})
+
+export type User = InferModel<typeof users, 'select'>
+export type NewUser = InferModel<typeof users, 'insert'>
+
+export type Event = InferModel<typeof events, 'select'>
 export type NewEvent = InferModel<typeof events, 'insert'>
+
+export type TicketOption = InferModel<typeof ticketOptions, 'select'>
+export type NewTicketOption = InferModel<typeof ticketOptions, 'insert'>

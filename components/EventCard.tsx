@@ -20,6 +20,12 @@ export default function EventCard({ event, editMode = false }: Props) {
             : event.start_time.getDayjs().format('H:mm')
         : ''
 
+    const rawPrice = event.metadata?.price
+    const displayPrice =
+        rawPrice && !isNaN(parseFloat(rawPrice))
+            ? `$${parseFloat(rawPrice).toFixed(2)}`
+            : null
+
     return (
         <div className="event-card">
             {firstImage && (
@@ -37,7 +43,7 @@ export default function EventCard({ event, editMode = false }: Props) {
                 {event.subtitle && <p className="event-subtitle">{event.subtitle}</p>}
                 {event.metadata?.price && (
                     <p className="event-price">
-                        <strong>Price:</strong> {event.metadata.price}
+                        <strong>Price:</strong> {displayPrice}
                     </p>
                 )}
                 <p className="event-info">

@@ -40,7 +40,7 @@ export function formatForApi(
 
     const metadata: Record<string, any> = {}
     if (input.description) metadata.description = input.description
-    if (input.price) metadata.price = input.price
+    if (input.price) metadata.price = parseFloat(input.price).toFixed(2)
     if (input.ticketing_link) metadata.ticketing_link = input.ticketing_link
     if (input.images.length) metadata.files = input.images
 

@@ -24,7 +24,6 @@ export default function CartPage() {
             <h1>Your Cart</h1>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                 {items.map(({ event, quantity }: CartItem) => {
-                    // pull numeric price
                     const raw = event.metadata?.price?.toString().replace(/[^0-9.]/g, '') || '0'
                     const unit = parseFloat(raw) || 0
                     const lineTotal = unit * quantity

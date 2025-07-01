@@ -12,7 +12,6 @@ export default function RouteGuard({ children }: RouteGuardProps) {
   const [authorized, setAuthorized] = useState(false)
 
   useEffect(() => {
-    // authCheck runs on initial load and on every route change
     const authCheck = async (url: string) => {
       const path = url.split('?')[0]
       const needsAuth = PROTECTED_PATHS.some(p => path.startsWith(p))
@@ -24,7 +23,7 @@ export default function RouteGuard({ children }: RouteGuardProps) {
 
       try {
         const res = await fetch('/api/me', {
-          credentials: 'include',  // ← send HTTP-only session cookie
+          credentials: 'include',
         })
         if (res.ok) {
           setAuthorized(true)
@@ -38,17 +37,14 @@ export default function RouteGuard({ children }: RouteGuardProps) {
       }
     }
 
-    // run the initial check
     authCheck(router.asPath)
 
-    // re-check on route changes
     router.events.on('routeChangeComplete', authCheck)
     return () => {
       router.events.off('routeChangeComplete', authCheck)
     }
   }, [router])
 
-  // while we’re waiting for auth, don't render children
   if (!authorized) return null
   return <>{children}</>
 }

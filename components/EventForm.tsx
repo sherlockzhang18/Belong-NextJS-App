@@ -1,14 +1,12 @@
 import React, { useState, useEffect, FormEvent } from 'react'
-import { Box, Stack, TextField, Button, Alert } from '@mui/material'
+import { Box, Stack, TextField, Button, Alert, InputAdornment } from '@mui/material'
 import { UploadButton } from '../utils/uploadthing'
 import type { EventInput } from '../services/eventUtils'
 
+
 type Props = {
-    /** Initial values for edit mode */
     initial?: EventInput
-    /** Called when the form is submitted */
     onSubmit(values: EventInput): Promise<void>
-    /** Optional callback after successful submission */
     onSuccess?(): void
 }
 
@@ -28,7 +26,6 @@ export default function EventForm({ initial, onSubmit, onSuccess }: Props) {
     const [error, setError] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
 
-    // Remove an image by index
     const removeImage = (idx: number) => {
         setInput(i => ({
             ...i,
@@ -36,7 +33,6 @@ export default function EventForm({ initial, onSubmit, onSuccess }: Props) {
         }))
     }
 
-    // Generic field‐change handler
     const handleChange = (field: keyof EventInput) => (
         e: React.ChangeEvent<HTMLInputElement>
     ) => {
@@ -47,7 +43,6 @@ export default function EventForm({ initial, onSubmit, onSuccess }: Props) {
         e.preventDefault()
         setError(null)
 
-        // Basic date/time validation
         if (input.end_date && input.end_date < input.date) {
             return setError('End date cannot be before start date')
         }
@@ -63,6 +58,13 @@ export default function EventForm({ initial, onSubmit, onSuccess }: Props) {
             setError(err.message || 'Submission failed')
         } finally {
             setLoading(false)
+        }
+    }
+
+    const normalizePrice = () => {
+        const n = parseFloat(input.price || '')
+        if (!isNaN(n)) {
+            setInput((prev) => ({ ...prev, price: n.toFixed(2) }))
         }
     }
 
@@ -131,11 +133,21 @@ export default function EventForm({ initial, onSubmit, onSuccess }: Props) {
                     onChange={handleChange('location_name')}
                 />
 
-                {/* UploadThing button for images */}
+                <TextField
+                    label="Price"
+                    type="number"
+                    inputProps={{ step: '0.01', min: 0 }}
+                    value={input.price ?? ''}
+                    onChange={handleChange('price')}
+                    onBlur={normalizePrice}
+                    InputProps={{
+                        startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                    }}
+                />
+
                 <UploadButton
                     endpoint="imageUploader"
                     onClientUploadComplete={(files) => {
-                        // files: UploadedFileData<{ uploadedBy: string }>[]
                         const urls = files.map(f => f.url)
                         setInput(prev => ({ ...prev, images: [...prev.images, ...urls] }))
                     }}
@@ -145,7 +157,6 @@ export default function EventForm({ initial, onSubmit, onSuccess }: Props) {
                     }}
                 />
 
-                {/* Thumbnails + remove buttons */}
                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                     {input.images.map((url, idx) => (
                         <Box key={idx} sx={{ position: 'relative' }}>
