@@ -6,6 +6,7 @@ import axios from 'axios'
 import { Event as ChronosEvent } from '@jstiava/chronos'
 import { useCart } from '../../../services/useCart'
 import { parseRawEvent, RawEvent } from '../../../services/eventUtils'
+import Image from 'next/image'
 
 export default function EventDetail() {
     const router = useRouter()
@@ -52,22 +53,22 @@ export default function EventDetail() {
                 ← Back to events
             </Button>
 
-            {/* only one image, constrained in size */}
             {firstImage && (
-                <div style={{
-                    width: '100%',
-                    maxWidth: 600,
-                    margin: '0 auto 1.5rem',
-                }}>
-                    <img
+                <div
+                    style={{
+                        position: 'relative',
+                        width: '100%',
+                        maxWidth: 600,
+                        height: 400,
+                        margin: '0 auto 1.5rem',
+                    }}
+                >
+                    <Image
                         src={firstImage}
                         alt={event.name}
-                        style={{
-                            display: 'block',
-                            width: '100%',
-                            height: 'auto',
-                            borderRadius: 8,
-                        }}
+                        fill
+                        style={{ objectFit: 'cover', borderRadius: 8 }}
+                        priority
                     />
                 </div>
             )}

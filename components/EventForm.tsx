@@ -2,6 +2,7 @@ import React, { useState, useEffect, FormEvent } from 'react'
 import { Box, Stack, TextField, Button, Alert, InputAdornment } from '@mui/material'
 import { UploadButton } from '../utils/uploadthing'
 import type { EventInput } from '../services/eventUtils'
+import Image from 'next/image'
 
 
 type Props = {
@@ -163,12 +164,12 @@ export default function EventForm({ initial, onSubmit, onSuccess }: Props) {
                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                     {input.images.map((url, idx) => (
                         <Box key={idx} sx={{ position: 'relative' }}>
-                            <img
+                            <Image
                                 src={url}
                                 alt={`Uploaded #${idx + 1}`}
+                                width={80}
+                                height={80}
                                 style={{
-                                    width: 80,
-                                    height: 80,
                                     objectFit: 'cover',
                                     borderRadius: 4,
                                 }}
