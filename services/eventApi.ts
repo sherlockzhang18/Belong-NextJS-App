@@ -1,4 +1,3 @@
-// services/eventApi.ts
 import axios from 'axios'
 import type { EventPayload } from '../pages/api/events'
 import type { EventInput } from './eventUtils'
@@ -27,7 +26,6 @@ export async function updateEvent(input: EventInput) {
 }
 
 export async function deleteEvent(uuid: string) {
-    // pass uuid as query parameter
     await axios.delete('/api/events', {
         params: { uuid },
         withCredentials: true,

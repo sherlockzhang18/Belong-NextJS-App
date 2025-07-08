@@ -1,4 +1,3 @@
-// pages/api/events.ts
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { db, schema } from '../../utils/db'
 import { eq } from 'drizzle-orm'
@@ -22,7 +21,6 @@ export default async function handler(
         { events: EventPayload[] } | { message: string }
     >
 ) {
-    // ─── READ ───
     if (req.method === 'GET') {
         try {
             const rows = await db
@@ -59,14 +57,11 @@ export default async function handler(
         }
     }
 
-    // ─── GUARD ───
-    // All writes require an authenticated admin
     const user = await getUserFromReq(req, res)
     if (!user || user.role !== 'admin') {
         return res.status(403).json({ message: 'Unauthorized' })
     }
 
-    // ─── DELETE ───
     if (req.method === 'DELETE') {
         const { uuid } = req.query
         if (typeof uuid !== 'string') {
@@ -84,8 +79,6 @@ export default async function handler(
         }
     }
 
-    // ─── CREATE & UPDATE ───
-    // These still need their body checked
     const body = req.body as Partial<EventPayload> & {
         name: string
         date: number
@@ -136,7 +129,6 @@ export default async function handler(
             return res.status(200).json({ message: 'Updated' })
         }
 
-        // ─── NOT ALLOWED ───
         res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE'])
         return res
             .status(405)

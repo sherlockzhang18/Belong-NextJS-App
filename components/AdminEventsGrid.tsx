@@ -1,11 +1,5 @@
 import React, { JSX, useState } from 'react'
-import {
-    DataGrid,
-    GridColDef,
-    GridCellParams,
-    GridRowParams,
-    GridActionsCellItem,
-} from '@mui/x-data-grid'
+import { DataGrid, GridColDef, GridRowParams, GridActionsCellItem} from '@mui/x-data-grid'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import AddIcon from '@mui/icons-material/Add'
@@ -14,7 +8,6 @@ import Button from '@mui/material/Button'
 import Dialog from '@mui/material/Dialog'
 import Snackbar from '@mui/material/Snackbar'
 
-import AdminSync from './AdminSync'
 import EventForm from './EventForm'
 import { useEvents } from '../services/useEvents'
 import { parseRawEvent } from '../services/eventUtils'
@@ -170,9 +163,7 @@ export default function AdminEventsGrid(): JSX.Element {
             component="section"
             sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
         >
-            {/* put both buttons at the very top */}
             <Box sx={{ display: 'flex', gap: 2 }}>
-                <AdminSync />
                 <Button
                     variant="contained"
                     startIcon={<AddIcon />}
@@ -185,7 +176,6 @@ export default function AdminEventsGrid(): JSX.Element {
                 </Button>
             </Box>
 
-            {/* re-introduce the horizontal scroll wrapper */}
             <Box sx={{ overflowX: 'auto' }}>
                 <DataGrid<RawEvent> 
                     rows={events}
@@ -202,7 +192,6 @@ export default function AdminEventsGrid(): JSX.Element {
                 />
             </Box>
 
-            {/* Create/Edit dialog */}
             <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
                 <EventForm
                     initial={editing ?? undefined}
@@ -220,7 +209,6 @@ export default function AdminEventsGrid(): JSX.Element {
                 />
             </Dialog>
 
-            {/* Feedback Snackbar */}
             <Snackbar
                 open={snack.open}
                 message={snack.message}
