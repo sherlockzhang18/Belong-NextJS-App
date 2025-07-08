@@ -1,21 +1,29 @@
-import React, { useState } from 'react'
-import { DataGrid, GridColDef, GridCellParams, GridRowParams, GridActionsCellItem } from '@mui/x-data-grid'
+import React, { JSX, useState } from 'react'
+import {
+    DataGrid,
+    GridColDef,
+    GridCellParams,
+    GridRowParams,
+    GridActionsCellItem,
+} from '@mui/x-data-grid'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import AddIcon from '@mui/icons-material/Add'
+import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Dialog from '@mui/material/Dialog'
 import Snackbar from '@mui/material/Snackbar'
-import Box from '@mui/material/Box'
 
+import AdminSync from './AdminSync'
 import EventForm from './EventForm'
 import { useEvents } from '../services/useEvents'
-import type { RawEvent, EventInput } from '../services/eventUtils'
 import { parseRawEvent } from '../services/eventUtils'
+import type { RawEvent, EventInput } from '../services/eventUtils'
 
-export default function AdminEventsGrid() {
+export default function AdminEventsGrid(): JSX.Element {
     const { events, loading, error, create, update, remove } = useEvents()
-    const [openDialog, setOpenDialog] = useState(false)
+
+    const [open, setOpen] = useState(false)
     const [editing, setEditing] = useState<EventInput | null>(null)
     const [snack, setSnack] = useState<{ open: boolean; message: string }>({
         open: false,
@@ -45,45 +53,91 @@ export default function AdminEventsGrid() {
     }
 
     const columns: GridColDef<RawEvent>[] = [
+        { field: 'name', headerName: 'Name', width: 200 },
         {
-            field: 'name',
-            headerName: 'Name',
-            flex: 1,
+            field: 'subtitle',
+            headerName: 'Subtitle',
+            width: 200,
+            renderCell: ({ row }) => row.subtitle ?? '',
+        },
+        {
+            field: 'description',
+            headerName: 'Description',
+            width: 300,
+            renderCell: ({ row }) => row.metadata?.description ?? '',
         },
         {
             field: 'date',
-            headerName: 'Date',
+            headerName: 'Start Date',
             width: 120,
-            valueGetter: (params: GridCellParams<RawEvent>) => {
-                const ev = parseRawEvent(params.row)
+            renderCell: ({ row }) => {
+                const ev = parseRawEvent(row)
                 return ev.date ? ev.date.format('YYYY-MM-DD') : ''
             },
         },
         {
+            field: 'end_date',
+            headerName: 'End Date',
+            width: 120,
+            renderCell: ({ row }) => {
+                const ev = parseRawEvent(row)
+                return ev.end_date ? ev.end_date.format('YYYY-MM-DD') : ''
+            },
+        },
+        {
             field: 'start_time',
-            headerName: 'Start',
+            headerName: 'Start Time',
             width: 100,
-            valueGetter: (params: GridCellParams<RawEvent>) => {
-                const ev = parseRawEvent(params.row)
+            renderCell: ({ row }) => {
+                const ev = parseRawEvent(row)
                 return ev.start_time
                     ? ev.start_time.getDayjs().format('HH:mm')
                     : ''
             },
         },
         {
+            field: 'end_time',
+            headerName: 'End Time',
+            width: 100,
+            renderCell: ({ row }) => {
+                const ev = parseRawEvent(row)
+                return ev.end_time
+                    ? ev.end_time.getDayjs().format('HH:mm')
+                    : ''
+            },
+        },
+        {
+            field: 'location_name',
+            headerName: 'Location',
+            width: 200,
+            renderCell: ({ row }) => row.location_name ?? '',
+        },
+        {
             field: 'price',
             headerName: 'Price',
             width: 100,
-            valueGetter: (params: GridCellParams<RawEvent>) => {
-                const raw = params.row.metadata?.price
-                return raw ? parseFloat(raw).toFixed(2) : ''
+            renderCell: ({ row }) => {
+                const p = parseRawEvent(row).metadata?.price
+                return p ? parseFloat(p).toFixed(2) : ''
             },
+        },
+        {
+            field: 'ticketing_link',
+            headerName: 'Ticket Link',
+            width: 200,
+            renderCell: ({ row }) => row.metadata?.ticketing_link ?? '',
+        },
+        {
+            field: 'files',
+            headerName: 'Images',
+            width: 200,
+            renderCell: ({ row }) => (row.metadata?.files || []).join(', '),
         },
         {
             field: 'actions',
             type: 'actions',
             headerName: 'Actions',
-            width: 100,
+            width: 120,
             getActions: (params: GridRowParams<RawEvent>) => [
                 <GridActionsCellItem
                     key="edit"
@@ -91,7 +145,7 @@ export default function AdminEventsGrid() {
                     label="Edit"
                     onClick={() => {
                         setEditing(toInput(params.row))
-                        setOpenDialog(true)
+                        setOpen(true)
                     }}
                 />,
                 <GridActionsCellItem
@@ -112,30 +166,44 @@ export default function AdminEventsGrid() {
     }
 
     return (
-        <Box>
-            <Box mb={2}>
+        <Box
+            component="section"
+            sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
+        >
+            {/* put both buttons at the very top */}
+            <Box sx={{ display: 'flex', gap: 2 }}>
+                <AdminSync />
                 <Button
                     variant="contained"
                     startIcon={<AddIcon />}
                     onClick={() => {
                         setEditing(null)
-                        setOpenDialog(true)
+                        setOpen(true)
                     }}
                 >
                     New Event
                 </Button>
             </Box>
 
-            <div style={{ height: 600, width: '100%' }}>
-                <DataGrid<RawEvent>
+            {/* re-introduce the horizontal scroll wrapper */}
+            <Box sx={{ overflowX: 'auto' }}>
+                <DataGrid<RawEvent> 
                     rows={events}
                     columns={columns}
                     loading={loading}
                     getRowId={(r) => r.uuid}
+                    autoHeight
+                    pagination
+                    initialState={{
+                        pagination: { paginationModel: { page: 0, pageSize: 25 } },
+                    }}
+                    pageSizeOptions={[25]}
+                    sx={{ overflowX: 'auto' }}
                 />
-            </div>
+            </Box>
 
-            <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
+            {/* Create/Edit dialog */}
+            <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
                 <EventForm
                     initial={editing ?? undefined}
                     onSubmit={async (vals) => {
@@ -146,12 +214,13 @@ export default function AdminEventsGrid() {
                             await create(vals)
                             setSnack({ open: true, message: 'Created' })
                         }
-                        setOpenDialog(false)
+                        setOpen(false)
                     }}
                     onSuccess={() => { }}
                 />
             </Dialog>
 
+            {/* Feedback Snackbar */}
             <Snackbar
                 open={snack.open}
                 message={snack.message}

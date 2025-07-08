@@ -1,27 +1,28 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import Link from 'next/link'
-import { useRouter } from 'next/router'
 import Button from '@mui/material/Button'
+import { useRouter } from 'next/router'
 import { Event as ChronosEvent, dayjs } from '@jstiava/chronos'
 import EventCard from '../components/EventCard'
 import { useCurrentUser } from '../services/useCurrentUser'
-import { parseRawEvent, RawEvent } from '../services/eventUtils'
+import { parseRawEvent, type RawEvent } from '../services/eventUtils'
 
 export default function Home() {
     const router = useRouter()
-    const { isAdmin, isAuthenticated, refresh } = useCurrentUser()
+    const { user, isAdmin, isAuthenticated, refresh } = useCurrentUser()
     const [events, setEvents] = useState<ChronosEvent[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
-        axios.get<{ events: RawEvent[] }>('/api/events')
-            .then(res => {
-                const wrapped = res.data.events.map(raw => parseRawEvent(raw))
+        axios
+            .get<{ events: RawEvent[] }>('/api/events')
+            .then((res) => {
+                const wrapped = res.data.events.map((raw) => parseRawEvent(raw))
                 setEvents(wrapped)
             })
-            .catch(err => {
+            .catch((err) => {
                 console.error(err)
                 setError(err.message)
             })
@@ -42,8 +43,8 @@ export default function Home() {
     if (error) return <p style={{ color: 'red' }}>Error: {error}</p>
 
     const today = dayjs().startOf('day')
-    const upcoming = events.filter(e =>
-        e.date ? e.date.isSame(today, 'day') || e.date.isAfter(today, 'day') : false
+    const upcoming = events.filter((e) =>
+        e.date ? e.date.isSame(today, 'day') || e.date.isAfter(today, 'day') : false,
     )
 
     return (
@@ -52,24 +53,36 @@ export default function Home() {
                 <Button component={Link} href="/cart" variant="contained" color="primary">
                     View Cart
                 </Button>
+
                 <Button component={Link} href="/events/create" variant="contained" color="primary">
                     Create Event
                 </Button>
+
                 {isAdmin && (
                     <Button component={Link} href="/admin" variant="outlined" color="secondary">
                         Admin Dashboard
                     </Button>
                 )}
-                {isAuthenticated && (
+
+                {isAuthenticated ? (
                     <Button onClick={handleLogout} variant="outlined" color="inherit">
                         Log Out
                     </Button>
+                ) : (
+                    <>
+                        <Button component={Link} href="/login" variant="outlined" color="primary">
+                            Log In
+                        </Button>
+                        <Button component={Link} href="/register" variant="outlined" color="secondary">
+                            Register
+                        </Button>
+                    </>
                 )}
             </div>
 
             <h1>Upcoming Events</h1>
             <div className="event-grid">
-                {upcoming.map(e => (
+                {upcoming.map((e) => (
                     <EventCard key={e.uuid} event={e} editMode={isAdmin} />
                 ))}
             </div>

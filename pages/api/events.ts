@@ -1,3 +1,4 @@
+// pages/api/events.ts
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { db, schema } from '../../utils/db'
 import { eq } from 'drizzle-orm'
@@ -17,8 +18,11 @@ export type EventPayload = {
 
 export default async function handler(
     req: NextApiRequest,
-    res: NextApiResponse<{ events: EventPayload[] } | { message: string }>
+    res: NextApiResponse<
+        { events: EventPayload[] } | { message: string }
+    >
 ) {
+    // ─── READ ───
     if (req.method === 'GET') {
         try {
             const rows = await db
@@ -36,7 +40,7 @@ export default async function handler(
                 .from(schema.events)
                 .orderBy(schema.events.date, schema.events.start_time)
 
-            const events: EventPayload[] = rows.map(r => ({
+            const events: EventPayload[] = rows.map((r) => ({
                 uuid: r.uuid,
                 name: r.name,
                 subtitle: r.subtitle,
@@ -55,18 +59,42 @@ export default async function handler(
         }
     }
 
+    // ─── GUARD ───
+    // All writes require an authenticated admin
     const user = await getUserFromReq(req, res)
     if (!user || user.role !== 'admin') {
         return res.status(403).json({ message: 'Unauthorized' })
     }
 
+    // ─── DELETE ───
+    if (req.method === 'DELETE') {
+        const { uuid } = req.query
+        if (typeof uuid !== 'string') {
+            return res.status(400).json({ message: 'UUID query param required' })
+        }
+        try {
+            await db
+                .delete(schema.events)
+                .where(eq(schema.events.uuid, uuid))
+                .execute()
+            return res.status(204).end()
+        } catch (err) {
+            console.error('DELETE /api/events error', err)
+            return res.status(500).json({ message: 'Deletion failed' })
+        }
+    }
+
+    // ─── CREATE & UPDATE ───
+    // These still need their body checked
     const body = req.body as Partial<EventPayload> & {
         name: string
         date: number
         start_time: string
     }
     if (!body.name || !body.date || !body.start_time) {
-        return res.status(400).json({ message: 'name, date & start_time required' })
+        return res
+            .status(400)
+            .json({ message: 'name, date & start_time required' })
     }
 
     try {
@@ -108,8 +136,11 @@ export default async function handler(
             return res.status(200).json({ message: 'Updated' })
         }
 
-        res.setHeader('Allow', ['GET', 'POST', 'PUT'])
-        return res.status(405).end(`Method ${req.method} Not Allowed`)
+        // ─── NOT ALLOWED ───
+        res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE'])
+        return res
+            .status(405)
+            .end(`Method ${req.method} Not Allowed`)
     } catch (err: any) {
         console.error('WRITE /api/events error', err)
         return res.status(500).json({ message: 'Database Error' })
