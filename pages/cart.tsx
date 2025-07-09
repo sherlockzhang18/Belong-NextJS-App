@@ -1,5 +1,3 @@
-// File: pages/cart.tsx
-
 import React from 'react'
 import Link from 'next/link'
 import Button from '@mui/material/Button'

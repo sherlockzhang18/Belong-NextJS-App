@@ -25,20 +25,17 @@ export default async function handler(
     req: NextApiRequest,
     res: NextApiResponse
 ) {
-    // Only allow GET method
     if (req.method !== 'GET') {
         res.setHeader('Allow', ['GET']);
         return res.status(405).end(`Method ${req.method} Not Allowed`);
     }
 
     try {
-        // Get user and validate request
         const user = await getUserFromReq(req, res);
         if (!user) {
             return res.status(401).json({ message: 'Unauthorized' });
         }
 
-        // Fetch user's orders with their items
         const orders = await db.select({
             order: schema.orders,
             items: schema.orderItems,
@@ -53,7 +50,6 @@ export default async function handler(
         .orderBy(schema.orders.created_at)
         .execute();
 
-        // Group items by order
         const groupedOrders = orders.reduce<GroupedOrders>((acc, row) => {
             const orderId = row.order.uuid;
             if (!acc[orderId]) {

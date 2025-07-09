@@ -15,7 +15,6 @@ export default async function handler(
     }
 
     try {
-        // 1. Get user and validate request
         const user = await getUserFromReq(req, res);
         if (!user) {
             return res.status(401).json({ message: 'Unauthorized' });
@@ -26,7 +25,6 @@ export default async function handler(
             return res.status(400).json({ message: 'No items provided' });
         }
 
-        // 2. Fetch all events and validate they exist
         const events = await Promise.all(
             items.map(item =>
                 db.select()
@@ -36,12 +34,10 @@ export default async function handler(
             )
         );
 
-        // Validate all events exist
         if (events.some(e => !e?.length)) {
             return res.status(400).json({ message: 'One or more events not found' });
         }
 
-        // 3. If ticket options are specified, validate them
         const ticketOptions = await Promise.all(
             items
                 .filter(item => item.ticketOptionId)
@@ -53,33 +49,28 @@ export default async function handler(
                 )
         );
 
-        // Validate all specified ticket options exist
         if (ticketOptions.some(t => !t?.length)) {
             return res.status(400).json({ message: 'One or more ticket options not found' });
         }
 
-        // 4. Calculate total amount
         let total = 0;
         items.forEach((item, idx) => {
             const event = new ChronosEvent(events[idx][0] as any);
             const quantity = item.quantity;
 
             if (item.ticketOptionId) {
-                // Use ticket option price if specified
-                const ticketOption = ticketOptions.find(t => 
+                const ticketOption = ticketOptions.find(t =>
                     t[0].id === item.ticketOptionId
                 )?.[0];
                 if (ticketOption) {
                     total += Number(ticketOption.price) * quantity;
                 }
             } else {
-                // Use event metadata price
                 const price = parseFloat(event.metadata.price || '0');
                 total += price * quantity;
             }
         });
 
-        // 5. Create a pending order
         const [order] = await db.insert(schema.orders)
             .values({
                 user_id: user.uuid,
@@ -90,16 +81,15 @@ export default async function handler(
             .returning()
             .execute();
 
-        // 6. Create order items
         await db.insert(schema.orderItems)
             .values(
                 items.map(item => {
                     const event = new ChronosEvent(events.find(e => e[0].uuid === item.eventId)![0] as any);
-                    const ticketOption = item.ticketOptionId 
+                    const ticketOption = item.ticketOptionId
                         ? ticketOptions.find(t => t[0].id === item.ticketOptionId)![0]
                         : null;
-                    
-                    const unitPrice = ticketOption 
+
+                    const unitPrice = ticketOption
                         ? Number(ticketOption.price)
                         : parseFloat(event.metadata.price || '0');
 
@@ -108,20 +98,18 @@ export default async function handler(
                         event_id: item.eventId,
                         ticket_option_id: item.ticketOptionId || null,
                         quantity: item.quantity,
-                        unit_price: unitPrice.toFixed(2), // Convert to string for database
+                        unit_price: unitPrice.toFixed(2),
                         subtotal: (unitPrice * item.quantity).toFixed(2)
                     };
                 })
             )
             .execute();
 
-        // 7. Create Stripe payment intent
         const paymentIntent = await createPaymentIntent(total, {
             orderId: order.uuid,
             userId: user.uuid
         });
 
-        // 8. Update order with payment intent ID
         await db.update(schema.orders)
             .set({ stripe_payment_intent_id: paymentIntent.id })
             .where(eq(schema.orders.uuid, order.uuid))
@@ -135,4 +123,4 @@ export default async function handler(
         console.error('Error in create-intent:', error);
         return res.status(500).json({ message: 'Internal server error' });
     }
-} 
+}
