@@ -3,18 +3,18 @@ import type { NewEvent } from '../drizzle/schema'
 
 const API_KEY = process.env.TM_API_KEY!
 const BASE_URL = 'https://app.ticketmaster.com/discovery/v2'
-const PAGE_SIZE = 30
+const PAGE_SIZE = 50
 
 export async function fetchTicketMasterRaw(): Promise<any> {
     const res = await axios.get(`${BASE_URL}/events.json`, {
-        params: { apikey: API_KEY, classificationName: 'NBA', size: PAGE_SIZE },
+        params: { apikey: API_KEY, classificationName: ['NBA', 'music', 'football'], size: PAGE_SIZE, locale: 'en-us' },
     })
     return res.data
 }
 
 export async function fetchTicketMasterEvents(): Promise<NewEvent[]> {
     const listRes = await axios.get(`${BASE_URL}/events.json`, {
-        params: { apikey: API_KEY, classificationName: 'music', size: PAGE_SIZE, locale: 'en-us' },
+        params: { apikey: API_KEY, classificationName: ['NBA', 'music', 'football'], size: PAGE_SIZE, locale: 'en-us' },
     })
     const items = (listRes.data._embedded?.events as any[]) || []
     const seen = new Set<string>()
