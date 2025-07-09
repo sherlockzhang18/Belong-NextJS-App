@@ -1,6 +1,7 @@
 import axios from 'axios'
 import type { EventPayload } from '../pages/api/events'
 import type { EventInput } from './eventUtils'
+import { formatForApi } from './eventUtils'
 
 export async function listEvents(): Promise<EventPayload[]> {
     const res = await axios.get<{ events: EventPayload[] }>('/api/events', {
@@ -12,7 +13,7 @@ export async function listEvents(): Promise<EventPayload[]> {
 export async function createEvent(input: EventInput) {
     await axios.post(
         '/api/events',
-        input,
+        formatForApi(input),
         { withCredentials: true }
     )
 }
@@ -20,7 +21,7 @@ export async function createEvent(input: EventInput) {
 export async function updateEvent(input: EventInput) {
     await axios.put(
         '/api/events',
-        input,
+        formatForApi(input),
         { withCredentials: true }
     )
 }
