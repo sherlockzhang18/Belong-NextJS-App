@@ -24,13 +24,11 @@ export default async function handler(
             return res.status(400).json({ message: 'Payment intent ID is required' });
         }
 
-        // Verify payment status with Stripe
         const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-        
+
         if (paymentIntent.status === 'succeeded') {
-            // Update order status to completed
             const [updatedOrder] = await db.update(schema.orders)
-                .set({ 
+                .set({
                     status: 'completed',
                     metadata: {
                         stripe_payment_status: 'succeeded',
@@ -46,15 +44,14 @@ export default async function handler(
                 return res.status(404).json({ message: 'Order not found' });
             }
 
-            return res.status(200).json({ 
-                success: true, 
+            return res.status(200).json({
+                success: true,
                 order: updatedOrder,
-                paymentStatus: paymentIntent.status 
+                paymentStatus: paymentIntent.status
             });
         } else {
-            // Payment failed or still processing
             await db.update(schema.orders)
-                .set({ 
+                .set({
                     status: paymentIntent.status === 'canceled' ? 'failed' : 'pending',
                     metadata: {
                         stripe_payment_status: paymentIntent.status,
@@ -64,8 +61,8 @@ export default async function handler(
                 .where(eq(schema.orders.stripe_payment_intent_id, paymentIntentId))
                 .execute();
 
-            return res.status(200).json({ 
-                success: false, 
+            return res.status(200).json({
+                success: false,
                 paymentStatus: paymentIntent.status,
                 message: `Payment ${paymentIntent.status}`
             });

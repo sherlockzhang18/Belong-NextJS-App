@@ -42,13 +42,13 @@ export default async function handler(
             event: schema.events,
             ticketOption: schema.ticketOptions
         })
-        .from(schema.orders)
-        .leftJoin(schema.orderItems, eq(schema.orders.uuid, schema.orderItems.order_id))
-        .leftJoin(schema.events, eq(schema.orderItems.event_id, schema.events.uuid))
-        .leftJoin(schema.ticketOptions, eq(schema.orderItems.ticket_option_id, schema.ticketOptions.id))
-        .where(eq(schema.orders.user_id, user.uuid))
-        .orderBy(schema.orders.created_at)
-        .execute();
+            .from(schema.orders)
+            .leftJoin(schema.orderItems, eq(schema.orders.uuid, schema.orderItems.order_id))
+            .leftJoin(schema.events, eq(schema.orderItems.event_id, schema.events.uuid))
+            .leftJoin(schema.ticketOptions, eq(schema.orderItems.ticket_option_id, schema.ticketOptions.id))
+            .where(eq(schema.orders.user_id, user.uuid))
+            .orderBy(schema.orders.created_at)
+            .execute();
 
         const groupedOrders = orders.reduce<GroupedOrders>((acc, row) => {
             const orderId = row.order.uuid;
@@ -58,7 +58,7 @@ export default async function handler(
                     items: []
                 };
             }
-            
+
             if (row.items && row.event) {
                 acc[orderId].items.push({
                     ...row.items,
@@ -66,7 +66,7 @@ export default async function handler(
                     ticketOption: row.ticketOption
                 });
             }
-            
+
             return acc;
         }, {});
 

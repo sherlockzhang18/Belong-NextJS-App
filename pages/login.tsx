@@ -20,7 +20,6 @@ export default function LoginPage() {
                 { username, password },
                 { withCredentials: true }
             )
-            // Redirect to the original page if specified, otherwise to home
             const redirectPath = typeof redirect === 'string' ? redirect : '/'
             router.push(redirectPath)
         } catch (err: any) {
