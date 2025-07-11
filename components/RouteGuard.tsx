@@ -5,7 +5,7 @@ interface RouteGuardProps {
   children: React.ReactNode
 }
 
-const PROTECTED_PATHS = ['/cart', '/admin']
+const PROTECTED_PATHS = ['/cart', '/admin', '/checkout', '/orders']
 
 export default function RouteGuard({ children }: RouteGuardProps) {
   const router = useRouter()
@@ -29,11 +29,11 @@ export default function RouteGuard({ children }: RouteGuardProps) {
           setAuthorized(true)
         } else {
           setAuthorized(false)
-          router.push('/login')
+          router.push(`/login?redirect=${encodeURIComponent(url)}`)
         }
       } catch {
         setAuthorized(false)
-        router.push('/login')
+        router.push(`/login?redirect=${encodeURIComponent(url)}`)
       }
     }
 

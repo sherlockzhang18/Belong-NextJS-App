@@ -69,7 +69,12 @@ export default function CartPage() {
             <h2>Total Price: ${totalPrice.toFixed(2)}</h2>
 
             <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem' }}>
-                <Button variant="contained" color="primary">
+                <Button 
+                    component={Link} 
+                    href="/checkout" 
+                    variant="contained" 
+                    color="primary"
+                >
                     Checkout
                 </Button>
                 <Button variant="text" color="secondary" onClick={clear}>

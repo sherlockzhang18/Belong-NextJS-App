@@ -58,6 +58,12 @@ export default function Home() {
                     Create Event
                 </Button>
 
+                {isAuthenticated && (
+                    <Button component={Link} href="/orders" variant="outlined" color="primary">
+                        My Orders
+                    </Button>
+                )}
+
                 {isAdmin && (
                     <Button component={Link} href="/admin" variant="outlined" color="secondary">
                         Admin Dashboard

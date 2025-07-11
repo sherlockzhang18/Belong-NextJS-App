@@ -7,6 +7,7 @@ import axios from 'axios'
 
 export default function LoginPage() {
     const router = useRouter()
+    const { redirect } = router.query
     const [username, setUsername] = useState('')
     const [password, setPassword] = useState('')
     const [error, setError] = useState<string | null>(null)
@@ -19,7 +20,9 @@ export default function LoginPage() {
                 { username, password },
                 { withCredentials: true }
             )
-            router.push('/')
+            // Redirect to the original page if specified, otherwise to home
+            const redirectPath = typeof redirect === 'string' ? redirect : '/'
+            router.push(redirectPath)
         } catch (err: any) {
             setError(err.response?.data?.message || 'Login failed')
         }
