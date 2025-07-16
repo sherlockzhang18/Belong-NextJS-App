@@ -31,13 +31,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         switch (req.method) {
             case 'POST': {
-                // Validate input
                 const errors = validateTicketOption(req.body)
                 if (errors.length > 0) {
                     return res.status(400).json({ errors })
                 }
 
-                // Create new ticket option
                 const newOption = await db.insert(ticketOptions).values({
                     event_id: req.body.event_id,
                     name: req.body.name,
@@ -48,7 +46,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             }
 
             case 'GET': {
-                // Get ticket options for an event
                 const eventId = req.query.event_id as string
                 if (!eventId) {
                     return res.status(400).json({ error: 'Event ID is required' })
@@ -58,7 +55,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             }
 
             case 'PUT': {
-                // Validate input
                 const { id, ...updateData } = req.body
                 if (!id) {
                     return res.status(400).json({ error: 'Ticket option ID is required' })
@@ -69,7 +65,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     return res.status(400).json({ errors })
                 }
 
-                // Update ticket option
                 const updated = await db.update(ticketOptions)
                     .set(updateData)
                     .where(eq(ticketOptions.id, id))
@@ -82,7 +77,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             }
 
             case 'DELETE': {
-                // Delete ticket option
                 const optionId = req.query.id as string
                 if (!optionId) {
                     return res.status(400).json({ error: 'Ticket option ID is required' })

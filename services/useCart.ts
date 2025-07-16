@@ -66,7 +66,6 @@ export function useCart() {
     }, [])
 
     useEffect(() => {
-        // Fetch ticket options for all items that have ticketOptionId
         const fetchTicketOptions = async () => {
             const optionsMap: Record<string, TicketOption> = {}
             
@@ -92,7 +91,6 @@ export function useCart() {
     }, [items])
 
     useEffect(() => {
-        // Calculate total price whenever items or ticket options change
         const total = items.reduce((sum, item) => {
             if (item.ticketOptionId && ticketOptions[item.ticketOptionId]) {
                 const price = parseFloat(ticketOptions[item.ticketOptionId].price)
@@ -103,7 +101,6 @@ export function useCart() {
         }, 0)
         setTotalPrice(total)
 
-        // Save to localStorage with only necessary event data
         const serializedItems: SerializedCartItem[] = items.map(item => ({
             eventData: {
                 uuid: item.event.uuid,

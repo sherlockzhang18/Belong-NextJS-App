@@ -17,7 +17,7 @@ export function useTicketOptions(eventId?: string) {
         })
         if (!response.ok) throw new Error('Failed to create ticket option')
         const newOption = await response.json()
-        mutate() // Refresh the data
+        mutate()
         return newOption
     }
 
@@ -29,7 +29,7 @@ export function useTicketOptions(eventId?: string) {
         })
         if (!response.ok) throw new Error('Failed to update ticket option')
         const updatedOption = await response.json()
-        mutate() // Refresh the data
+        mutate()
         return updatedOption
     }
 
@@ -38,7 +38,7 @@ export function useTicketOptions(eventId?: string) {
             method: 'DELETE',
         })
         if (!response.ok) throw new Error('Failed to delete ticket option')
-        mutate() // Refresh the data
+        mutate()
     }
 
     return {

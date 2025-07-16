@@ -28,7 +28,6 @@ export default function EventDetail() {
     useEffect(() => {
         if (typeof uuid !== 'string') return
         
-        // Fetch event details
         axios.get<{ events: RawEvent[] }>('/api/events')
             .then(res => {
                 const raw = res.data.events.find(e => e.uuid === uuid)
@@ -37,7 +36,6 @@ export default function EventDetail() {
             .catch(console.error)
             .finally(() => setLoading(false))
 
-        // Fetch ticket options
         axios.get<{ ticketOptions: TicketOption[] }>(`/api/events/${uuid}/ticket-options`)
             .then(res => {
                 setTicketOptions(res.data.ticketOptions)

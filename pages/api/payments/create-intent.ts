@@ -43,7 +43,6 @@ export default async function handler(
             return res.status(400).json({ message: 'No items provided' });
         }
 
-        // Fetch all events and ticket options in parallel
         const [eventsData, ticketOptionsData] = await Promise.all([
             Promise.all(
                 items.map(item =>
@@ -70,12 +69,10 @@ export default async function handler(
             return res.status(400).json({ message: 'One or more events not found' });
         }
 
-        // Validate ticket options exist
         if (ticketOptionsData.some(t => !t?.length)) {
             return res.status(400).json({ message: 'One or more ticket options not found' });
         }
 
-        // Calculate total
         let total = 0;
         items.forEach((item) => {
             if (item.ticketOptionId) {
@@ -97,20 +94,17 @@ export default async function handler(
             }
         });
 
-        // Validate total amount
         if (total <= 0) {
             return res.status(400).json({ message: 'Total amount must be greater than 0' });
         }
 
-        // Convert to cents and ensure it's a valid integer
         const amountInCents = Math.round(total * 100);
-        if (amountInCents < 50) { // Stripe's minimum amount is 50 cents
+        if (amountInCents < 50) {
             return res.status(400).json({ 
                 message: 'Total amount must be at least $0.50 to process payment'
             });
         }
 
-        // Create order
         const [order] = await db.insert(orders)
             .values({
                 user_id: user.uuid,
@@ -121,7 +115,6 @@ export default async function handler(
             .returning()
             .execute();
 
-        // Create order items
         await db.insert(orderItems)
             .values(
                 items.map(item => {
@@ -147,9 +140,8 @@ export default async function handler(
             )
             .execute();
 
-        // Create Stripe payment intent
         const paymentIntent = await createPaymentIntent({
-            amount: amountInCents, // Already in cents and validated
+            amount: amountInCents,
             currency: 'usd',
             metadata: {
                 order_id: order.uuid,

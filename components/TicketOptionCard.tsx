@@ -17,7 +17,7 @@ interface TicketOptionCardProps {
 
 export default function TicketOptionCard({ option, onAddToCart }: TicketOptionCardProps) {
     const [selectedQuantity, setSelectedQuantity] = useState(1);
-    const maxQuantity = Math.min(option.quantity, 10); // Limit max selection to 10 or available quantity
+    const maxQuantity = Math.min(option.quantity, 10);
 
     const handleIncrement = () => {
         if (selectedQuantity < maxQuantity) {
