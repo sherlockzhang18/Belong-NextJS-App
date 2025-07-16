@@ -1,92 +1,121 @@
-import React from 'react'
-import Link from 'next/link'
+import { useRouter } from 'next/router'
 import Button from '@mui/material/Button'
-import { useCart, CartItem } from '../services/useCart'
+import { useCart } from '../services/useCart'
+import { Box, Typography, IconButton } from '@mui/material'
+import AddIcon from '@mui/icons-material/Add'
+import RemoveIcon from '@mui/icons-material/Remove'
 
 export default function CartPage() {
-    const { items, add, remove, clear, totalPrice } = useCart()
+    const { items, remove, add, totalPrice, ticketOptions } = useCart()
+    const router = useRouter()
 
     if (items.length === 0) {
         return (
             <main style={{ padding: '2rem', textAlign: 'center' }}>
-                <h1>Your Cart Is Empty</h1>
-                <Button component={Link} href="/" variant="contained">
-                    Back to Events
+                <h2>Your cart is empty</h2>
+                <Button
+                    onClick={() => router.push('/')}
+                    variant="contained"
+                    color="primary"
+                    style={{ marginTop: '1rem' }}
+                >
+                    Browse Events
                 </Button>
             </main>
         )
     }
 
     return (
-        <main style={{ padding: '2rem', maxWidth: '600px', margin: 'auto' }}>
-            <h1>Your Cart</h1>
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                {items.map(({ event, quantity }: CartItem) => {
-                    const raw = event.metadata?.price?.toString().replace(/[^0-9.]/g, '') || '0'
-                    const unit = parseFloat(raw) || 0
-                    const lineTotal = unit * quantity
+        <main style={{ padding: '2rem', maxWidth: 800, margin: '0 auto' }}>
+            <Typography variant="h4" component="h1" gutterBottom>
+                Shopping Cart
+            </Typography>
+            
+            <Box sx={{ listStyle: 'none', padding: 0 }}>
+                {items.map((item) => {
+                    const ticketOption = item.ticketOptionId ? ticketOptions[item.ticketOptionId] : null
+                    const unitPrice = ticketOption 
+                        ? parseFloat(ticketOption.price)
+                        : parseFloat(item.event.metadata?.price?.toString() || '0')
+                    const lineTotal = unitPrice * item.quantity
 
                     return (
-                        <li
-                            key={event.uuid}
-                            style={{
-                                marginBottom: '1.5rem',
-                                padding: '1rem',
-                                border: '1px solid var(--foreground)',
-                                borderRadius: 8,
+                        <Box
+                            key={`${item.event.uuid}-${item.ticketOptionId || 'default'}`}
+                            sx={{
+                                mb: 2,
+                                p: 2,
+                                border: '1px solid',
+                                borderColor: 'divider',
+                                borderRadius: 2,
                                 display: 'flex',
                                 justifyContent: 'space-between',
-                                alignItems: 'center',
+                                alignItems: 'flex-start',
                             }}
                         >
-                            <div>
-                                <strong>{event.name}</strong>
-                                <div>Unit Price: ${unit.toFixed(2)}</div>
-                                <div>Quantity: {quantity}</div>
-                                <div>Total: ${lineTotal.toFixed(2)}</div>
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                <Button
-                                    variant="outlined"
-                                    size="small"
-                                    onClick={() => remove(event)}
-                                >
-                                    −1
-                                </Button>
-                                <Button
-                                    variant="outlined"
-                                    size="small"
-                                    onClick={() => add(event)}
-                                >
-                                    +1
-                                </Button>
-                            </div>
-                        </li>
+                            <Box>
+                                <Typography variant="h6" component="div" gutterBottom>
+                                    {item.event.name}
+                                </Typography>
+                                {ticketOption && (
+                                    <Typography variant="body1" color="text.secondary" gutterBottom>
+                                        Ticket Type: {ticketOption.name}
+                                    </Typography>
+                                )}
+                                <Typography variant="body2" gutterBottom>
+                                    Unit Price: ${unitPrice.toFixed(2)}
+                                </Typography>
+                                <Box display="flex" alignItems="center" gap={1} mb={1}>
+                                    <Typography variant="body2">Quantity:</Typography>
+                                    <IconButton 
+                                        size="small"
+                                        onClick={() => remove(item.event, { ticketOptionId: item.ticketOptionId })}
+                                    >
+                                        <RemoveIcon fontSize="small" />
+                                    </IconButton>
+                                    <Typography variant="body1" sx={{ mx: 1 }}>
+                                        {item.quantity}
+                                    </Typography>
+                                    <IconButton 
+                                        size="small"
+                                        onClick={() => add(item.event, { ticketOptionId: item.ticketOptionId })}
+                                    >
+                                        <AddIcon fontSize="small" />
+                                    </IconButton>
+                                </Box>
+                                <Typography variant="body1" fontWeight="bold">
+                                    Total: ${lineTotal.toFixed(2)}
+                                </Typography>
+                            </Box>
+                        </Box>
                     )
                 })}
-            </ul>
+            </Box>
 
-            <h2>Total Price: ${totalPrice.toFixed(2)}</h2>
-
-            <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem' }}>
+            <Box
+                sx={{
+                    mt: 4,
+                    pt: 2,
+                    borderTop: '2px solid',
+                    borderColor: 'divider',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                }}
+            >
+                <Typography variant="h5">
+                    Total: ${totalPrice.toFixed(2)}
+                </Typography>
                 <Button
-                    component={Link}
-                    href="/checkout"
                     variant="contained"
                     color="primary"
+                    onClick={() => router.push('/checkout')}
+                    disabled={items.length === 0}
+                    size="large"
                 >
-                    Checkout
+                    Proceed to Checkout
                 </Button>
-                <Button variant="text" color="secondary" onClick={clear}>
-                    Clear Cart
-                </Button>
-            </div>
-
-            <div style={{ marginTop: '2rem', textAlign: 'center' }}>
-                <Button component={Link} href="/" variant="text">
-                    ← Back to Events
-                </Button>
-            </div>
+            </Box>
         </main>
     )
 }

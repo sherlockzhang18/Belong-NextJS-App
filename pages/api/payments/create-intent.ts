@@ -1,9 +1,27 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { db, schema } from '../../../utils/db';
+import { db } from '../../../utils/db';
 import { getUserFromReq } from '../../../utils/auth';
-import { createPaymentIntent, CreatePaymentIntentData } from '../../../utils/stripe';
+import { createPaymentIntent } from '../../../utils/stripe';
 import { eq } from 'drizzle-orm';
-import { Event as ChronosEvent } from '@jstiava/chronos';
+import { events, ticketOptions, orders, orderItems } from '../../../drizzle/schema';
+
+interface OrderItem {
+    eventId: string;
+    quantity: number;
+    ticketOptionId?: string;
+}
+
+interface CreatePaymentIntentData {
+    items: OrderItem[];
+}
+
+interface EventMetadata {
+    price?: number | string;
+    description?: string;
+    files?: string[];
+    ticketing_link?: string;
+    [key: string]: any;
+}
 
 export default async function handler(
     req: NextApiRequest,
@@ -25,53 +43,75 @@ export default async function handler(
             return res.status(400).json({ message: 'No items provided' });
         }
 
-        const events = await Promise.all(
-            items.map(item =>
-                db.select()
-                    .from(schema.events)
-                    .where(eq(schema.events.uuid, item.eventId))
-                    .execute()
+        // Fetch all events and ticket options in parallel
+        const [eventsData, ticketOptionsData] = await Promise.all([
+            Promise.all(
+                items.map(item =>
+                    db.select()
+                        .from(events)
+                        .where(eq(events.uuid, item.eventId))
+                        .execute()
+                )
+            ),
+            Promise.all(
+                items
+                    .filter(item => item.ticketOptionId)
+                    .map(item =>
+                        db.select()
+                            .from(ticketOptions)
+                            .where(eq(ticketOptions.id, item.ticketOptionId!))
+                            .execute()
+                    )
             )
-        );
+        ]);
 
-        if (events.some(e => !e?.length)) {
+        // Validate events exist
+        if (eventsData.some(e => !e?.length)) {
             return res.status(400).json({ message: 'One or more events not found' });
         }
 
-        const ticketOptions = await Promise.all(
-            items
-                .filter(item => item.ticketOptionId)
-                .map(item =>
-                    db.select()
-                        .from(schema.ticketOptions)
-                        .where(eq(schema.ticketOptions.id, item.ticketOptionId!))
-                        .execute()
-                )
-        );
-
-        if (ticketOptions.some(t => !t?.length)) {
+        // Validate ticket options exist
+        if (ticketOptionsData.some(t => !t?.length)) {
             return res.status(400).json({ message: 'One or more ticket options not found' });
         }
 
+        // Calculate total
         let total = 0;
-        items.forEach((item, idx) => {
-            const event = new ChronosEvent(events[idx][0] as any);
-            const quantity = item.quantity;
-
+        items.forEach((item) => {
             if (item.ticketOptionId) {
-                const ticketOption = ticketOptions.find(t =>
-                    t[0].id === item.ticketOptionId
-                )?.[0];
-                if (ticketOption) {
-                    total += Number(ticketOption.price) * quantity;
+                const option = ticketOptionsData
+                    .flat()
+                    .find(t => t.id === item.ticketOptionId);
+                if (option) {
+                    total += Number(option.price) * item.quantity;
                 }
             } else {
-                const price = parseFloat(event.metadata.price || '0');
-                total += price * quantity;
+                const event = eventsData
+                    .flat()
+                    .find(e => e.uuid === item.eventId);
+                if (event) {
+                    const metadata = event.metadata as EventMetadata;
+                    const price = metadata.price ? parseFloat(metadata.price.toString()) : 0;
+                    total += price * item.quantity;
+                }
             }
         });
 
-        const [order] = await db.insert(schema.orders)
+        // Validate total amount
+        if (total <= 0) {
+            return res.status(400).json({ message: 'Total amount must be greater than 0' });
+        }
+
+        // Convert to cents and ensure it's a valid integer
+        const amountInCents = Math.round(total * 100);
+        if (amountInCents < 50) { // Stripe's minimum amount is 50 cents
+            return res.status(400).json({ 
+                message: 'Total amount must be at least $0.50 to process payment'
+            });
+        }
+
+        // Create order
+        const [order] = await db.insert(orders)
             .values({
                 user_id: user.uuid,
                 status: 'pending',
@@ -81,17 +121,19 @@ export default async function handler(
             .returning()
             .execute();
 
-        await db.insert(schema.orderItems)
+        // Create order items
+        await db.insert(orderItems)
             .values(
                 items.map(item => {
-                    const event = new ChronosEvent(events.find(e => e[0].uuid === item.eventId)![0] as any);
+                    const event = eventsData.flat().find(e => e.uuid === item.eventId)!;
                     const ticketOption = item.ticketOptionId
-                        ? ticketOptions.find(t => t[0].id === item.ticketOptionId)![0]
+                        ? ticketOptionsData.flat().find(t => t.id === item.ticketOptionId)
                         : null;
 
+                    const metadata = event.metadata as EventMetadata;
                     const unitPrice = ticketOption
                         ? Number(ticketOption.price)
-                        : parseFloat(event.metadata.price || '0');
+                        : (metadata.price ? parseFloat(metadata.price.toString()) : 0);
 
                     return {
                         order_id: order.uuid,
@@ -105,22 +147,22 @@ export default async function handler(
             )
             .execute();
 
-        const paymentIntent = await createPaymentIntent(total, {
-            orderId: order.uuid,
-            userId: user.uuid
+        // Create Stripe payment intent
+        const paymentIntent = await createPaymentIntent({
+            amount: amountInCents, // Already in cents and validated
+            currency: 'usd',
+            metadata: {
+                order_id: order.uuid,
+                user_id: user.uuid
+            }
         });
-
-        await db.update(schema.orders)
-            .set({ stripe_payment_intent_id: paymentIntent.id })
-            .where(eq(schema.orders.uuid, order.uuid))
-            .execute();
 
         return res.status(200).json({
-            clientSecret: paymentIntent.client_secret
+            clientSecret: paymentIntent.client_secret,
+            orderId: order.uuid
         });
-
     } catch (error) {
-        console.error('Error in create-intent:', error);
+        console.error('Error creating payment intent:', error);
         return res.status(500).json({ message: 'Internal server error' });
     }
 }
