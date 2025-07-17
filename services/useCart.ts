@@ -40,7 +40,6 @@ export function useCart() {
     const [ticketOptions, setTicketOptions] = useState<Record<string, TicketOption>>({})
 
     useEffect(() => {
-        // Load cart from localStorage on mount
         const saved = localStorage.getItem(CART_KEY)
         if (saved) {
             try {
@@ -54,7 +53,7 @@ export function useCart() {
                         end_time: item.eventData.end_time,
                         location_name: item.eventData.location_name,
                         metadata: item.eventData.metadata,
-                    }),
+                    } as any),
                     quantity: item.quantity,
                     ticketOptionId: item.ticketOptionId,
                 })))
@@ -68,26 +67,32 @@ export function useCart() {
     useEffect(() => {
         const fetchTicketOptions = async () => {
             const optionsMap: Record<string, TicketOption> = {}
-            
-            for (const item of items) {
-                if (item.ticketOptionId) {
-                    try {
-                        const response = await axios.get(`/api/events/${item.event.uuid}/ticket-options`)
-                        const options = response.data.ticketOptions
-                        const option = options.find((opt: TicketOption) => opt.id === item.ticketOptionId)
-                        if (option) {
-                            optionsMap[item.ticketOptionId] = option
-                        }
-                    } catch (error) {
-                        console.error('Error fetching ticket options:', error)
-                    }
+
+            const eventUuids = [...new Set(
+                items
+                    .filter(item => item.ticketOptionId)
+                    .map(item => item.event.uuid)
+            )]
+
+            for (const eventUuid of eventUuids) {
+                try {
+                    const response = await axios.get(`/api/events/${eventUuid}/ticket-options`)
+                    const options = response.data.ticketOptions
+
+                    options.forEach((option: TicketOption) => {
+                        optionsMap[option.id] = option
+                    })
+                } catch (error) {
+                    console.error(`Error fetching ticket options for event ${eventUuid}:`, error)
                 }
             }
-            
+
             setTicketOptions(optionsMap)
         }
 
-        fetchTicketOptions()
+        if (items.length > 0) {
+            fetchTicketOptions()
+        }
     }, [items])
 
     useEffect(() => {
@@ -108,7 +113,7 @@ export function useCart() {
                 date: item.event.date?.toString(),
                 start_time: item.event.start_time?.toString(),
                 end_time: item.event.end_time?.toString(),
-                location_name: item.event.location_name,
+                location_name: item.event.location_name || undefined,
                 metadata: item.event.metadata,
             },
             quantity: item.quantity,
@@ -119,8 +124,8 @@ export function useCart() {
 
     const add = (event: ChronosEvent, options?: { ticketOptionId?: string, quantity?: number }) => {
         setItems(current => {
-            const existing = current.find(item => 
-                item.event.uuid === event.uuid && 
+            const existing = current.find(item =>
+                item.event.uuid === event.uuid &&
                 item.ticketOptionId === options?.ticketOptionId
             )
 
@@ -132,18 +137,18 @@ export function useCart() {
                 )
             }
 
-            return [...current, { 
-                event, 
-                quantity: options?.quantity || 1, 
-                ticketOptionId: options?.ticketOptionId 
+            return [...current, {
+                event,
+                quantity: options?.quantity || 1,
+                ticketOptionId: options?.ticketOptionId
             }]
         })
     }
 
     const remove = (event: ChronosEvent, options?: { ticketOptionId?: string }) => {
         setItems(current => {
-            const existing = current.find(item => 
-                item.event.uuid === event.uuid && 
+            const existing = current.find(item =>
+                item.event.uuid === event.uuid &&
                 item.ticketOptionId === options?.ticketOptionId
             )
 
@@ -161,6 +166,20 @@ export function useCart() {
         })
     }
 
+    const getItemPrice = (item: CartItem): number => {
+        if (item.ticketOptionId && ticketOptions[item.ticketOptionId]) {
+            return parseFloat(ticketOptions[item.ticketOptionId].price)
+        }
+        return parseFloat(item.event.metadata?.price?.toString() || '0')
+    }
+
+    const getItemPriceDisplay = (item: CartItem): string => {
+        if (item.ticketOptionId && ticketOptions[item.ticketOptionId]) {
+            return ticketOptions[item.ticketOptionId].name
+        }
+        return 'General Admission'
+    }
+
     const clear = () => {
         setItems([])
         localStorage.removeItem(CART_KEY)
@@ -170,6 +189,8 @@ export function useCart() {
         items,
         totalPrice,
         ticketOptions,
+        getItemPrice,
+        getItemPriceDisplay,
         add,
         remove,
         clear,

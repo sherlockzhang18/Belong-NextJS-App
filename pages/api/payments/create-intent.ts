@@ -64,7 +64,6 @@ export default async function handler(
             )
         ]);
 
-        // Validate events exist
         if (eventsData.some(e => !e?.length)) {
             return res.status(400).json({ message: 'One or more events not found' });
         }
@@ -100,7 +99,7 @@ export default async function handler(
 
         const amountInCents = Math.round(total * 100);
         if (amountInCents < 50) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 message: 'Total amount must be at least $0.50 to process payment'
             });
         }

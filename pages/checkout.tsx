@@ -47,7 +47,6 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ clientSecret, onSuccess }) =>
             setError(submitError.message ?? 'An unexpected error occurred')
             setProcessing(false)
         } else {
-            // Payment succeeded, call the success handler
             onSuccess()
         }
     }
@@ -77,7 +76,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ clientSecret, onSuccess }) =>
 
 export default function CheckoutPage() {
     const router = useRouter()
-    const { items, totalPrice, clear } = useCart()
+    const { items, totalPrice, getItemPrice, getItemPriceDisplay, clear } = useCart()
     const { user, isAuthenticated } = useCurrentUser()
     const [clientSecret, setClientSecret] = useState<string>('')
     const [loading, setLoading] = useState(false)
@@ -112,7 +111,8 @@ export default function CheckoutPage() {
                 body: JSON.stringify({
                     items: items.map(item => ({
                         eventId: item.event.uuid,
-                        quantity: item.quantity
+                        quantity: item.quantity,
+                        ticketOptionId: item.ticketOptionId
                     }))
                 }),
             })
@@ -174,12 +174,13 @@ export default function CheckoutPage() {
 
             <div style={{ marginBottom: '2rem', padding: '1.5rem', border: '1px solid #ddd', borderRadius: '8px' }}>
                 <h2>Order Summary</h2>
-                {items.map(({ event, quantity }) => {
-                    const unitPrice = parseFloat(event.metadata?.price?.toString().replace(/[^0-9.]/g, '') || '0')
-                    const lineTotal = unitPrice * quantity
+                {items.map((item) => {
+                    const unitPrice = getItemPrice(item)
+                    const lineTotal = unitPrice * item.quantity
+                    const ticketType = getItemPriceDisplay(item)
 
                     return (
-                        <div key={event.uuid} style={{
+                        <div key={`${item.event.uuid}-${item.ticketOptionId || 'general'}`} style={{
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center',
@@ -187,9 +188,9 @@ export default function CheckoutPage() {
                             borderBottom: '1px solid #eee'
                         }}>
                             <div>
-                                <strong>{event.name}</strong>
+                                <strong>{item.event.name}</strong>
                                 <div style={{ fontSize: '0.9em', color: '#666' }}>
-                                    Quantity: {quantity} × ${unitPrice.toFixed(2)}
+                                    {ticketType} - Quantity: {item.quantity} × ${unitPrice.toFixed(2)}
                                 </div>
                             </div>
                             <div style={{ fontWeight: 'bold' }}>

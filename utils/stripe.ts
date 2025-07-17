@@ -16,7 +16,7 @@ interface CreatePaymentIntentOptions {
 
 export async function createPaymentIntent({ amount, currency = 'usd', metadata = {} }: CreatePaymentIntentOptions) {
     return stripe.paymentIntents.create({
-        amount, // amount should already be in cents
+        amount,
         currency,
         metadata,
         automatic_payment_methods: {
