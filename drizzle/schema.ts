@@ -27,6 +27,19 @@ export const ticketOptions = pgTable('ticket_options', {
     name: text('name').notNull(),
     price: numeric('price', { precision: 10, scale: 2 }).notNull(),
     quantity: integer('quantity').notNull().default(1),
+    seat_type: text('seat_type').notNull().default('general'), // 'general' or 'assigned'
+})
+
+export const seats = pgTable('seats', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    event_id: uuid('event_id').notNull().references(() => events.uuid),
+    ticket_option_id: uuid('ticket_option_id').notNull().references(() => ticketOptions.id),
+    seat_number: text('seat_number').notNull(),
+    row: text('row').notNull(),
+    seat_in_row: integer('seat_in_row').notNull(),
+    status: text('status').notNull().default('available'),
+    reserved_until: timestamp('reserved_until'),
+    created_at: timestamp('created_at').defaultNow().notNull(),
 })
 
 export const orders = pgTable('orders', {
@@ -44,6 +57,7 @@ export const orderItems = pgTable('order_items', {
     order_id: uuid('order_id').notNull().references(() => orders.uuid),
     event_id: uuid('event_id').notNull().references(() => events.uuid),
     ticket_option_id: uuid('ticket_option_id').references(() => ticketOptions.id),
+    seat_id: uuid('seat_id').references(() => seats.id), // nullable, for seat-specific purchases
     quantity: integer('quantity').notNull(),
     unit_price: numeric('unit_price', { precision: 10, scale: 2 }).notNull(),
     subtotal: numeric('subtotal', { precision: 10, scale: 2 }).notNull(),
@@ -58,6 +72,9 @@ export type NewEvent = InferModel<typeof events, 'insert'>
 
 export type TicketOption = InferModel<typeof ticketOptions, 'select'>
 export type NewTicketOption = InferModel<typeof ticketOptions, 'insert'>
+
+export type Seat = InferModel<typeof seats, 'select'>
+export type NewSeat = InferModel<typeof seats, 'insert'>
 
 export type Order = InferModel<typeof orders, 'select'>
 export type NewOrder = InferModel<typeof orders, 'insert'>

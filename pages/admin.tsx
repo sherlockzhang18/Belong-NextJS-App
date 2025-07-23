@@ -14,13 +14,22 @@ export default function AdminPage() {
         >
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="h4">Admin Dashboard</Typography>
-                <Button
-                    component={Link}
-                    href="/"
-                    variant="text"
-                >
-                    ← Back to Events
-                </Button>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button
+                        component={Link}
+                        href="/admin/seats"
+                        variant="outlined"
+                    >
+                        Manage Seats
+                    </Button>
+                    <Button
+                        component={Link}
+                        href="/"
+                        variant="text"
+                    >
+                        ← Back to Events
+                    </Button>
+                </Box>
             </Box>
 
             <Box>

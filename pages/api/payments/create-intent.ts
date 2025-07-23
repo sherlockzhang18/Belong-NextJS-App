@@ -3,12 +3,13 @@ import { db } from '../../../utils/db';
 import { getUserFromReq } from '../../../utils/auth';
 import { createPaymentIntent } from '../../../utils/stripe';
 import { eq } from 'drizzle-orm';
-import { events, ticketOptions, orders, orderItems } from '../../../drizzle/schema';
+import { events, ticketOptions, orders, orderItems, seats } from '../../../drizzle/schema';
 
 interface OrderItem {
     eventId: string;
     quantity: number;
     ticketOptionId?: string;
+    seatIds?: string[];
 }
 
 interface CreatePaymentIntentData {
@@ -43,6 +44,38 @@ export default async function handler(
             return res.status(400).json({ message: 'No items provided' });
         }
 
+        for (const item of items) {
+            if (item.seatIds && item.seatIds.length > 0) {
+                const seatStatuses = await Promise.all(
+                    item.seatIds.map(seatId =>
+                        db.select()
+                            .from(seats)
+                            .where(eq(seats.id, seatId))
+                            .limit(1)
+                    )
+                );
+
+                for (let i = 0; i < seatStatuses.length; i++) {
+                    const [seat] = seatStatuses[i];
+                    if (!seat) {
+                        return res.status(400).json({ 
+                            message: `Seat ${item.seatIds[i]} not found` 
+                        });
+                    }
+                    if (seat.status === 'sold') {
+                        return res.status(409).json({ 
+                            message: `Seat ${seat.seat_number} is no longer available` 
+                        });
+                    }
+                    if (seat.status === 'reserved' && seat.reserved_until && seat.reserved_until < new Date()) {
+                        return res.status(409).json({ 
+                            message: `Reservation for seat ${seat.seat_number} has expired` 
+                        });
+                    }
+                }
+            }
+        }
+
         const [eventsData, ticketOptionsData] = await Promise.all([
             Promise.all(
                 items.map(item =>
@@ -73,8 +106,35 @@ export default async function handler(
         }
 
         let total = 0;
+        const seatsData: Array<{ seat: any; ticketOption: any }> = [];
+
+        for (const item of items) {
+            if (item.seatIds && item.seatIds.length > 0) {
+                const itemSeats = await Promise.all(
+                    item.seatIds.map(seatId =>
+                        db.select({
+                            seat: seats,
+                            ticketOption: ticketOptions
+                        })
+                        .from(seats)
+                        .innerJoin(ticketOptions, eq(seats.ticket_option_id, ticketOptions.id))
+                        .where(eq(seats.id, seatId))
+                        .limit(1)
+                    )
+                );
+                seatsData.push(...itemSeats.map(([data]) => data));
+            }
+        }
+
         items.forEach((item) => {
-            if (item.ticketOptionId) {
+            if (item.seatIds && item.seatIds.length > 0) {
+                item.seatIds.forEach(seatId => {
+                    const seatData = seatsData.find(s => s.seat.id === seatId);
+                    if (seatData) {
+                        total += Number(seatData.ticketOption.price);
+                    }
+                });
+            } else if (item.ticketOptionId) {
                 const option = ticketOptionsData
                     .flat()
                     .find(t => t.id === item.ticketOptionId);
@@ -114,29 +174,49 @@ export default async function handler(
             .returning()
             .execute();
 
+        const orderItemsToInsert = [];
+        
+        for (const item of items) {
+            if (item.seatIds && item.seatIds.length > 0) {
+                for (const seatId of item.seatIds) {
+                    const seatData = seatsData.find(s => s.seat.id === seatId);
+                    if (seatData) {
+                        orderItemsToInsert.push({
+                            order_id: order.uuid,
+                            event_id: item.eventId,
+                            ticket_option_id: seatData.ticketOption.id,
+                            seat_id: seatId,
+                            quantity: 1,
+                            unit_price: Number(seatData.ticketOption.price).toFixed(2),
+                            subtotal: Number(seatData.ticketOption.price).toFixed(2)
+                        });
+                    }
+                }
+            } else {
+                const event = eventsData.flat().find(e => e.uuid === item.eventId)!;
+                const ticketOption = item.ticketOptionId
+                    ? ticketOptionsData.flat().find(t => t.id === item.ticketOptionId)
+                    : null;
+
+                const metadata = event.metadata as EventMetadata;
+                const unitPrice = ticketOption
+                    ? Number(ticketOption.price)
+                    : (metadata.price ? parseFloat(metadata.price.toString()) : 0);
+
+                orderItemsToInsert.push({
+                    order_id: order.uuid,
+                    event_id: item.eventId,
+                    ticket_option_id: item.ticketOptionId || null,
+                    seat_id: null,
+                    quantity: item.quantity,
+                    unit_price: unitPrice.toFixed(2),
+                    subtotal: (unitPrice * item.quantity).toFixed(2)
+                });
+            }
+        }
+
         await db.insert(orderItems)
-            .values(
-                items.map(item => {
-                    const event = eventsData.flat().find(e => e.uuid === item.eventId)!;
-                    const ticketOption = item.ticketOptionId
-                        ? ticketOptionsData.flat().find(t => t.id === item.ticketOptionId)
-                        : null;
-
-                    const metadata = event.metadata as EventMetadata;
-                    const unitPrice = ticketOption
-                        ? Number(ticketOption.price)
-                        : (metadata.price ? parseFloat(metadata.price.toString()) : 0);
-
-                    return {
-                        order_id: order.uuid,
-                        event_id: item.eventId,
-                        ticket_option_id: item.ticketOptionId || null,
-                        quantity: item.quantity,
-                        unit_price: unitPrice.toFixed(2),
-                        subtotal: (unitPrice * item.quantity).toFixed(2)
-                    };
-                })
-            )
+            .values(orderItemsToInsert)
             .execute();
 
         const paymentIntent = await createPaymentIntent({

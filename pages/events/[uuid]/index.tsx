@@ -9,12 +9,14 @@ import { parseRawEvent, RawEvent } from '../../../services/eventUtils'
 import Image from 'next/image'
 import { Typography, Box } from '@mui/material'
 import TicketOptionCard from '../../../components/TicketOptionCard'
+import SeatMap from '../../../components/SeatMap'
 
 interface TicketOption {
     id: string
     name: string
     price: string
     quantity: number
+    seat_type?: string
 }
 
 export default function EventDetail() {
@@ -23,6 +25,8 @@ export default function EventDetail() {
     const [event, setEvent] = useState<ChronosEvent | null>(null)
     const [loading, setLoading] = useState(true)
     const [ticketOptions, setTicketOptions] = useState<TicketOption[]>([])
+    const [hasAssignedSeats, setHasAssignedSeats] = useState(false)
+    const [selectedSeats, setSelectedSeats] = useState<string[]>([])
     const cart = useCart()
 
     useEffect(() => {
@@ -36,12 +40,23 @@ export default function EventDetail() {
             .catch(console.error)
             .finally(() => setLoading(false))
 
-        axios.get<{ ticketOptions: TicketOption[] }>(`/api/events/${uuid}/ticket-options`)
+        axios.get(`/api/events/${uuid}/seats`)
             .then(res => {
-                setTicketOptions(res.data.ticketOptions)
+                setHasAssignedSeats(res.data.hasAssignedSeats)
+                if (!res.data.hasAssignedSeats) {
+                    setTicketOptions(res.data.generalTickets || [])
+                }
             })
             .catch(console.error)
-    }, [uuid])
+
+        axios.get<{ ticketOptions: TicketOption[] }>(`/api/events/${uuid}/ticket-options`)
+            .then(res => {
+                if (!hasAssignedSeats) {
+                    setTicketOptions(res.data.ticketOptions)
+                }
+            })
+            .catch(console.error)
+    }, [uuid, hasAssignedSeats])
 
     if (!router.isReady || loading) return <p>Loading…</p>
     if (!event) return (
@@ -61,6 +76,30 @@ export default function EventDetail() {
 
     const handleAddToCart = (ticketOptionId: string, quantity: number) => {
         cart.add(event, { ticketOptionId, quantity })
+    }
+
+    const handleSeatSelection = (seatIds: string[]) => {
+        setSelectedSeats(seatIds)
+    }
+
+    const handleAddSeatsToCart = async () => {
+        if (selectedSeats.length === 0) return
+
+        try {
+            await axios.post('/api/seats/reserve', { seatIds: selectedSeats })
+            
+            cart.add(event, { 
+                seatIds: selectedSeats,
+                quantity: selectedSeats.length 
+            })
+            
+            setSelectedSeats([])
+            
+            router.push('/cart')
+        } catch (error: any) {
+            console.error('Error reserving seats:', error)
+            alert(error.response?.data?.message || 'Failed to reserve seats')
+        }
     }
 
     return (
@@ -101,7 +140,29 @@ export default function EventDetail() {
                 <p className="detail-desc">{event.metadata.description}</p>
             )}
 
-            {ticketOptions.length > 0 ? (
+            {hasAssignedSeats ? (
+                <Box sx={{ my: 3 }}>
+                    <SeatMap
+                        eventId={uuid as string}
+                        selectedSeats={selectedSeats}
+                        onSeatSelect={handleSeatSelection}
+                        maxSelectable={8}
+                    />
+                    
+                    {selectedSeats.length > 0 && (
+                        <Box sx={{ mt: 3, textAlign: 'center' }}>
+                            <Button
+                                variant="contained"
+                                color="primary"
+                                size="large"
+                                onClick={handleAddSeatsToCart}
+                            >
+                                Add {selectedSeats.length} Seat{selectedSeats.length !== 1 ? 's' : ''} to Cart
+                            </Button>
+                        </Box>
+                    )}
+                </Box>
+            ) : ticketOptions.length > 0 ? (
                 <Box sx={{ my: 3 }}>
                     <Typography variant="h6" gutterBottom>
                         Select Tickets

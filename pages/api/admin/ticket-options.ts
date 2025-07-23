@@ -39,8 +39,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 const newOption = await db.insert(ticketOptions).values({
                     event_id: req.body.event_id,
                     name: req.body.name,
-                    price: req.body.price,
+                    price: req.body.price.toString(),
                     quantity: req.body.quantity || 1,
+                    seat_type: req.body.seat_type || 'general',
                 }).returning()
                 return res.status(201).json(newOption[0])
             }

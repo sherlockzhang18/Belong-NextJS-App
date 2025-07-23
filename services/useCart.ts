@@ -6,6 +6,7 @@ export interface CartItem {
     event: ChronosEvent
     quantity: number
     ticketOptionId?: string
+    seatIds?: string[]
 }
 
 interface SerializedCartItem {
@@ -20,6 +21,7 @@ interface SerializedCartItem {
     }
     quantity: number
     ticketOptionId?: string
+    seatIds?: string[]
 }
 
 interface CartState {
@@ -56,6 +58,7 @@ export function useCart() {
                     } as any),
                     quantity: item.quantity,
                     ticketOptionId: item.ticketOptionId,
+                    seatIds: item.seatIds,
                 })))
             } catch (err) {
                 console.error('Failed to load cart:', err)
@@ -118,18 +121,20 @@ export function useCart() {
             },
             quantity: item.quantity,
             ticketOptionId: item.ticketOptionId,
+            seatIds: item.seatIds,
         }))
         localStorage.setItem(CART_KEY, JSON.stringify({ items: serializedItems }))
     }, [items, ticketOptions])
 
-    const add = (event: ChronosEvent, options?: { ticketOptionId?: string, quantity?: number }) => {
+    const add = (event: ChronosEvent, options?: { ticketOptionId?: string, quantity?: number, seatIds?: string[] }) => {
         setItems(current => {
             const existing = current.find(item =>
                 item.event.uuid === event.uuid &&
-                item.ticketOptionId === options?.ticketOptionId
+                item.ticketOptionId === options?.ticketOptionId &&
+                JSON.stringify(item.seatIds) === JSON.stringify(options?.seatIds)
             )
 
-            if (existing) {
+            if (existing && !options?.seatIds) {
                 return current.map(item =>
                     item === existing
                         ? { ...item, quantity: item.quantity + (options?.quantity || 1) }
@@ -140,21 +145,23 @@ export function useCart() {
             return [...current, {
                 event,
                 quantity: options?.quantity || 1,
-                ticketOptionId: options?.ticketOptionId
+                ticketOptionId: options?.ticketOptionId,
+                seatIds: options?.seatIds,
             }]
         })
     }
 
-    const remove = (event: ChronosEvent, options?: { ticketOptionId?: string }) => {
+    const remove = (event: ChronosEvent, options?: { ticketOptionId?: string, seatIds?: string[] }) => {
         setItems(current => {
             const existing = current.find(item =>
                 item.event.uuid === event.uuid &&
-                item.ticketOptionId === options?.ticketOptionId
+                item.ticketOptionId === options?.ticketOptionId &&
+                JSON.stringify(item.seatIds) === JSON.stringify(options?.seatIds)
             )
 
             if (!existing) return current
 
-            if (existing.quantity > 1) {
+            if (existing.quantity > 1 && !existing.seatIds) {
                 return current.map(item =>
                     item === existing
                         ? { ...item, quantity: item.quantity - 1 }
