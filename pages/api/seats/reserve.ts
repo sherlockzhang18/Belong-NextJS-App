@@ -25,6 +25,7 @@ export default async function handler(
             return res.status(400).json({ message: 'Seat IDs required' });
         }
 
+        // reserve for 10 minutes only
         const reservedUntil = new Date(Date.now() + reservationMinutes * 60 * 1000);
 
         const result = await db.transaction(async (tx) => {
