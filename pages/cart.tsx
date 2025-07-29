@@ -58,16 +58,31 @@ export default function CartPage() {
             <Typography variant="h4" component="h1" gutterBottom>
                 Shopping Cart
             </Typography>
-            
+
             <Box sx={{ listStyle: 'none', padding: 0 }}>
                 {items.map((item, index) => {
                     const ticketOption = item.ticketOptionId ? ticketOptions[item.ticketOptionId] : null
-                    const unitPrice = ticketOption 
-                        ? parseFloat(ticketOption.price)
-                        : parseFloat(item.event.metadata?.price?.toString() || '0')
-                    const lineTotal = unitPrice * item.quantity
 
-                    const itemKey = item.seatIds 
+                    let unitPrice = 0
+                    let lineTotal = 0
+
+                    if (item.seatIds && item.seatIds.length > 0) {
+                        // For seated items, calculate price from seat details
+                        const seatPrices = item.seatIds.map(seatId => {
+                            const seatDetail = seatDetails[seatId]
+                            return seatDetail ? parseFloat(seatDetail.price) : 0
+                        })
+                        lineTotal = seatPrices.reduce((sum, price) => sum + price, 0)
+                        unitPrice = lineTotal / item.seatIds.length // Average price per seat
+                    } else {
+                        // For general admission items
+                        unitPrice = ticketOption
+                            ? parseFloat(ticketOption.price)
+                            : parseFloat(item.event.metadata?.price?.toString() || '0')
+                        lineTotal = unitPrice * item.quantity
+                    }
+
+                    const itemKey = item.seatIds
                         ? `${item.event.uuid}-seats-${item.seatIds.join('-')}`
                         : `${item.event.uuid}-${item.ticketOptionId || 'default'}-${index}`
 
@@ -89,16 +104,18 @@ export default function CartPage() {
                                 <Typography variant="h6" component="div" gutterBottom>
                                     {item.event.name}
                                 </Typography>
-                                
+
                                 {item.seatIds && item.seatIds.length > 0 ? (
                                     <>
                                         <Typography variant="body1" color="text.secondary" gutterBottom>
                                             Selected Seats: {item.seatIds.length} seat{item.seatIds.length !== 1 ? 's' : ''}
                                         </Typography>
                                         <Typography variant="body2" gutterBottom sx={{ fontFamily: 'monospace' }}>
-                                            Seats: {item.seatIds.map(seatId => 
-                                                seatDetails[seatId]?.seat_number || `Seat ${seatId.slice(-4)}`
-                                            ).join(', ')}
+                                            Seats: {item.seatIds.map(seatId => {
+                                                const seatDetail = seatDetails[seatId]
+                                                const seatPrice = seatDetail ? parseFloat(seatDetail.price) : 0
+                                                return `${seatDetail?.seat_number || `Seat ${seatId.slice(-4)}`} ($${seatPrice.toFixed(2)})`
+                                            }).join(', ')}
                                         </Typography>
                                     </>
                                 ) : (
@@ -110,7 +127,7 @@ export default function CartPage() {
                                         )}
                                         <Box display="flex" alignItems="center" gap={1} mb={1}>
                                             <Typography variant="body2">Quantity:</Typography>
-                                            <IconButton 
+                                            <IconButton
                                                 size="small"
                                                 onClick={() => remove(item.event, { ticketOptionId: item.ticketOptionId })}
                                             >
@@ -119,7 +136,7 @@ export default function CartPage() {
                                             <Typography variant="body1" sx={{ mx: 1 }}>
                                                 {item.quantity}
                                             </Typography>
-                                            <IconButton 
+                                            <IconButton
                                                 size="small"
                                                 onClick={() => add(item.event, { ticketOptionId: item.ticketOptionId })}
                                             >
@@ -128,15 +145,21 @@ export default function CartPage() {
                                         </Box>
                                     </>
                                 )}
-                                
-                                <Typography variant="body2" gutterBottom>
-                                    Unit Price: ${unitPrice.toFixed(2)}
-                                </Typography>
+
+                                {item.seatIds && item.seatIds.length > 0 ? (
+                                    <Typography variant="body2" gutterBottom>
+                                        Total for {item.seatIds.length} seat{item.seatIds.length !== 1 ? 's' : ''}
+                                    </Typography>
+                                ) : (
+                                    <Typography variant="body2" gutterBottom>
+                                        Unit Price: ${unitPrice.toFixed(2)}
+                                    </Typography>
+                                )}
                                 <Typography variant="body1" fontWeight="bold">
                                     Total: ${lineTotal.toFixed(2)}
                                 </Typography>
                             </Box>
-                            
+
                             <Button
                                 variant="outlined"
                                 size="small"
@@ -149,9 +172,9 @@ export default function CartPage() {
                                             console.error('Error releasing seats:', error)
                                         }
                                     }
-                                    remove(item.event, { 
+                                    remove(item.event, {
                                         ticketOptionId: item.ticketOptionId,
-                                        seatIds: item.seatIds 
+                                        seatIds: item.seatIds
                                     })
                                 }}
                             >

@@ -82,10 +82,41 @@ export default function CheckoutPage() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [mounted, setMounted] = useState(false)
+    const [seatDetails, setSeatDetails] = useState<Record<string, any>>({})
 
     useEffect(() => {
         setMounted(true)
     }, [])
+
+    useEffect(() => {
+        const fetchSeatDetails = async () => {
+            const allSeatIds = items
+                .filter(item => item.seatIds && item.seatIds.length > 0)
+                .flatMap(item => item.seatIds || [])
+
+            if (allSeatIds.length > 0) {
+                try {
+                    const response = await fetch('/api/seats/details', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ seatIds: allSeatIds })
+                    })
+                    const data = await response.json()
+                    const seatMap = data.seats.reduce((acc: any, seat: any) => {
+                        acc[seat.id] = seat
+                        return acc
+                    }, {})
+                    setSeatDetails(seatMap)
+                } catch (error) {
+                    console.error('Error fetching seat details:', error)
+                }
+            }
+        }
+
+        if (items.length > 0) {
+            fetchSeatDetails()
+        }
+    }, [items])
 
     useEffect(() => {
         if (mounted && items.length === 0) {
@@ -112,7 +143,8 @@ export default function CheckoutPage() {
                     items: items.map(item => ({
                         eventId: item.event.uuid,
                         quantity: item.quantity,
-                        ticketOptionId: item.ticketOptionId
+                        ticketOptionId: item.ticketOptionId,
+                        seatIds: item.seatIds
                     }))
                 }),
             })
@@ -175,9 +207,25 @@ export default function CheckoutPage() {
             <div style={{ marginBottom: '2rem', padding: '1.5rem', border: '1px solid #ddd', borderRadius: '8px' }}>
                 <h2>Order Summary</h2>
                 {items.map((item) => {
-                    const unitPrice = getItemPrice(item)
-                    const lineTotal = unitPrice * item.quantity
-                    const ticketType = getItemPriceDisplay(item)
+                    let unitPrice = 0
+                    let lineTotal = 0
+                    let ticketType = ''
+
+                    if (item.seatIds && item.seatIds.length > 0) {
+                        // For seated items, calculate from seat details
+                        const seatPrices = item.seatIds.map(seatId => {
+                            const seatDetail = seatDetails[seatId]
+                            return seatDetail ? parseFloat(seatDetail.price) : 0
+                        })
+                        lineTotal = seatPrices.reduce((sum, price) => sum + price, 0)
+                        unitPrice = lineTotal / item.seatIds.length
+                        ticketType = `${item.seatIds.length} Selected Seat${item.seatIds.length !== 1 ? 's' : ''}`
+                    } else {
+                        // For general admission items
+                        unitPrice = getItemPrice(item)
+                        lineTotal = unitPrice * item.quantity
+                        ticketType = getItemPriceDisplay(item)
+                    }
 
                     return (
                         <div key={`${item.event.uuid}-${item.ticketOptionId || 'general'}`} style={{
@@ -190,7 +238,17 @@ export default function CheckoutPage() {
                             <div>
                                 <strong>{item.event.name}</strong>
                                 <div style={{ fontSize: '0.9em', color: '#666' }}>
-                                    {ticketType} - Quantity: {item.quantity} × ${unitPrice.toFixed(2)}
+                                    {item.seatIds && item.seatIds.length > 0 ? (
+                                        <>
+                                            {ticketType}
+                                            <br />
+                                            Seats: {item.seatIds.map(seatId =>
+                                                seatDetails[seatId]?.seat_number || `Seat ${seatId.slice(-4)}`
+                                            ).join(', ')}
+                                        </>
+                                    ) : (
+                                        `${ticketType} - Quantity: ${item.quantity} × $${unitPrice.toFixed(2)}`
+                                    )}
                                 </div>
                             </div>
                             <div style={{ fontWeight: 'bold' }}>

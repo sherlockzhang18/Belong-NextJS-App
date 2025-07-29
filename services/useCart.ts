@@ -99,15 +99,37 @@ export function useCart() {
     }, [items])
 
     useEffect(() => {
-        const total = items.reduce((sum, item) => {
-            if (item.ticketOptionId && ticketOptions[item.ticketOptionId]) {
-                const price = parseFloat(ticketOptions[item.ticketOptionId].price)
-                return sum + (price * item.quantity)
+        const calculateTotal = async () => {
+            let total = 0
+
+            for (const item of items) {
+                if (item.seatIds && item.seatIds.length > 0) {
+                    // For seated tickets, get prices from seat details
+                    try {
+                        const response = await axios.post('/api/seats/details', { seatIds: item.seatIds })
+                        const seatPrices = response.data.seats.map((seat: any) => parseFloat(seat.price))
+                        total += seatPrices.reduce((sum: number, price: number) => sum + price, 0)
+                    } catch (error) {
+                        console.error('Error fetching seat prices:', error)
+                        // Fallback to event metadata price if seat details unavailable
+                        const fallbackPrice = parseFloat(item.event.metadata?.price?.toString() || '0')
+                        total += fallbackPrice * item.seatIds.length
+                    }
+                } else if (item.ticketOptionId && ticketOptions[item.ticketOptionId]) {
+                    // For general tickets with ticket option
+                    const price = parseFloat(ticketOptions[item.ticketOptionId].price)
+                    total += price * item.quantity
+                } else {
+                    // Fallback to event metadata price
+                    const price = parseFloat(item.event.metadata?.price?.toString() || '0')
+                    total += price * item.quantity
+                }
             }
-            const price = parseFloat(item.event.metadata?.price?.toString() || '0')
-            return sum + (price * item.quantity)
-        }, 0)
-        setTotalPrice(total)
+
+            setTotalPrice(total)
+        }
+
+        calculateTotal()
 
         const serializedItems: SerializedCartItem[] = items.map(item => ({
             eventData: {
@@ -174,6 +196,11 @@ export function useCart() {
     }
 
     const getItemPrice = (item: CartItem): number => {
+        if (item.seatIds && item.seatIds.length > 0) {
+            // For seated items, price needs to be fetched from seat details
+            // This is a synchronous function, so we return 0 and rely on cart page to handle pricing
+            return 0
+        }
         if (item.ticketOptionId && ticketOptions[item.ticketOptionId]) {
             return parseFloat(ticketOptions[item.ticketOptionId].price)
         }
