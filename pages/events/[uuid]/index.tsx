@@ -9,7 +9,8 @@ import { parseRawEvent, RawEvent } from '../../../services/eventUtils'
 import Image from 'next/image'
 import { Typography, Box } from '@mui/material'
 import TicketOptionCard from '../../../components/TicketOptionCard'
-import SeatMap from '../../../components/SeatMap'
+import StadiumOverview from '../../../components/StadiumOverview'
+import SectionSeatMap from '../../../components/SectionSeatMap'
 
 interface TicketOption {
     id: string
@@ -27,36 +28,54 @@ export default function EventDetail() {
     const [ticketOptions, setTicketOptions] = useState<TicketOption[]>([])
     const [hasAssignedSeats, setHasAssignedSeats] = useState(false)
     const [selectedSeats, setSelectedSeats] = useState<string[]>([])
+    const [selectedSection, setSelectedSection] = useState<{ id: string; name: string } | null>(null)
+    const [hasStadiumLayout, setHasStadiumLayout] = useState(false)
     const cart = useCart()
 
     useEffect(() => {
         if (typeof uuid !== 'string') return
         
-        axios.get<{ events: RawEvent[] }>('/api/events')
-            .then(res => {
-                const raw = res.data.events.find(e => e.uuid === uuid)
-                setEvent(raw ? parseRawEvent(raw) : null)
-            })
-            .catch(console.error)
-            .finally(() => setLoading(false))
-
-        axios.get(`/api/events/${uuid}/seats`)
-            .then(res => {
-                setHasAssignedSeats(res.data.hasAssignedSeats)
-                if (!res.data.hasAssignedSeats) {
-                    setTicketOptions(res.data.generalTickets || [])
+        let eventData: RawEvent | undefined;
+        let seatsData: any;
+        
+        const fetchData = async () => {
+            try {
+                const eventsRes = await axios.get<{ events: RawEvent[] }>('/api/events');
+                const raw = eventsRes.data.events.find(e => e.uuid === uuid);
+                eventData = raw;
+                setEvent(raw ? parseRawEvent(raw) : null);
+                
+                if (raw?.location_name?.toLowerCase().includes('bank of america stadium')) {
+                    try {
+                        const stadiumRes = await axios.get(`/api/events/${uuid}/stadium`);
+                        if (stadiumRes.data.stadium && stadiumRes.data.sections.length > 0) {
+                            setHasStadiumLayout(true);
+                            setHasAssignedSeats(true);
+                        }
+                    } catch (error) {
+                        setHasStadiumLayout(false);
+                        setHasAssignedSeats(false);
+                    }
                 }
-            })
-            .catch(console.error)
-
-        axios.get<{ ticketOptions: TicketOption[] }>(`/api/events/${uuid}/ticket-options`)
-            .then(res => {
-                if (!hasAssignedSeats) {
-                    setTicketOptions(res.data.ticketOptions)
+                
+                try {
+                    const ticketOptionsRes = await axios.get<{ ticketOptions: TicketOption[] }>(`/api/events/${uuid}/ticket-options`);
+                    if (!hasStadiumLayout || ticketOptionsRes.data.ticketOptions.some(t => t.seat_type === 'general')) {
+                        setTicketOptions(ticketOptionsRes.data.ticketOptions);
+                    }
+                } catch (error) {
+                    console.error('Error fetching ticket options:', error);
                 }
-            })
-            .catch(console.error)
-    }, [uuid, hasAssignedSeats])
+                
+            } catch (error) {
+                console.error('Error fetching event data:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        
+        fetchData();
+    }, [uuid]);
 
     if (!router.isReady || loading) return <p>Loading…</p>
     if (!event) return (
@@ -76,6 +95,16 @@ export default function EventDetail() {
 
     const handleAddToCart = (ticketOptionId: string, quantity: number) => {
         cart.add(event, { ticketOptionId, quantity })
+    }
+
+    const handleSectionSelect = (sectionId: string, sectionName: string) => {
+        setSelectedSection({ id: sectionId, name: sectionName })
+        setSelectedSeats([])
+    }
+
+    const handleBackToOverview = () => {
+        setSelectedSection(null)
+        setSelectedSeats([])
     }
 
     const handleSeatSelection = (seatIds: string[]) => {
@@ -103,7 +132,7 @@ export default function EventDetail() {
     }
 
     return (
-        <main className="event-detail" style={{ padding: '1rem' }}>
+        <main className="event-detail" style={{ padding: '1rem', maxWidth: '100%', width: '100%' }}>
             <Button component={Link} href="/" variant="text" sx={{ mb: 2 }}>
                 ← Back to events
             </Button>
@@ -142,12 +171,30 @@ export default function EventDetail() {
 
             {hasAssignedSeats ? (
                 <Box sx={{ my: 3 }}>
-                    <SeatMap
-                        eventId={uuid as string}
-                        selectedSeats={selectedSeats}
-                        onSeatSelect={handleSeatSelection}
-                        maxSelectable={8}
-                    />
+                    {hasStadiumLayout ? (
+                        selectedSection ? (
+                            <SectionSeatMap
+                                eventId={uuid as string}
+                                sectionId={selectedSection.id}
+                                sectionName={selectedSection.name}
+                                selectedSeats={selectedSeats}
+                                onSeatSelect={handleSeatSelection}
+                                onBackToOverview={handleBackToOverview}
+                                maxSelectable={8}
+                            />
+                        ) : (
+                            <StadiumOverview
+                                eventId={uuid as string}
+                                onSectionSelect={handleSectionSelect}
+                            />
+                        )
+                    ) : (
+                        <Box sx={{ textAlign: 'center', py: 4 }}>
+                            <Typography color="text.secondary">
+                                Stadium layout not available for this venue.
+                            </Typography>
+                        </Box>
+                    )}
                     
                     {selectedSeats.length > 0 && (
                         <Box sx={{ mt: 3, textAlign: 'center' }}>

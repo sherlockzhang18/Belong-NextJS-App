@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, integer, numeric, jsonb } from 'drizzle-orm/pg-core'
+import { pgTable, uuid, text, timestamp, integer, numeric, jsonb, boolean } from 'drizzle-orm/pg-core'
 import { InferModel } from 'drizzle-orm'
 
 export const users = pgTable('users', {
@@ -18,7 +18,33 @@ export const events = pgTable('events', {
     start_time: numeric('start_time', { precision: 5, scale: 3 }).notNull(),
     end_time: numeric('end_time', { precision: 5, scale: 3 }),
     location_name: text('location_name'),
+    stadium_id: uuid('stadium_id').references(() => stadiums.id), // NEW: Link to stadium
     metadata: jsonb('metadata').notNull(),
+})
+
+// NEW: Stadium/Venue table for reusable layouts
+export const stadiums = pgTable('stadiums', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    name: text('name').notNull().unique(),
+    city: text('city'),
+    state: text('state'),
+    layout_config: jsonb('layout_config').notNull(), // SVG coordinates and paths
+    created_at: timestamp('created_at').defaultNow().notNull(),
+})
+
+// NEW: Stadium sections/segments
+export const stadium_sections = pgTable('stadium_sections', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    stadium_id: uuid('stadium_id').notNull().references(() => stadiums.id),
+    section_number: text('section_number').notNull(), // e.g., "101", "501", "342"
+    section_name: text('section_name').notNull(), // e.g., "Lower Level 101", "Upper Level 501"
+    level_type: text('level_type').notNull(), // e.g., "lower", "club", "upper", "field"
+    max_row: text('max_row'), // e.g., "Z" for highest row
+    seats_per_row: integer('seats_per_row').default(20),
+    pricing_tier: text('pricing_tier').notNull().default('standard'), // standard, premium, club, field
+    display_config: jsonb('display_config').notNull(), // SVG path, colors, positioning
+    is_active: boolean('is_active').default(true),
+    created_at: timestamp('created_at').defaultNow().notNull(),
 })
 
 export const ticketOptions = pgTable('ticket_options', {
@@ -34,6 +60,7 @@ export const seats = pgTable('seats', {
     id: uuid('id').defaultRandom().primaryKey(),
     event_id: uuid('event_id').notNull().references(() => events.uuid),
     ticket_option_id: uuid('ticket_option_id').notNull().references(() => ticketOptions.id),
+    section_id: uuid('section_id').references(() => stadium_sections.id), // NEW: Link to section
     seat_number: text('seat_number').notNull(),
     row: text('row').notNull(),
     seat_in_row: integer('seat_in_row').notNull(),
@@ -81,3 +108,9 @@ export type NewOrder = InferModel<typeof orders, 'insert'>
 
 export type OrderItem = InferModel<typeof orderItems, 'select'>
 export type NewOrderItem = InferModel<typeof orderItems, 'insert'>
+
+export type Stadium = InferModel<typeof stadiums, 'select'>
+export type NewStadium = InferModel<typeof stadiums, 'insert'>
+
+export type StadiumSection = InferModel<typeof stadium_sections, 'select'>
+export type NewStadiumSection = InferModel<typeof stadium_sections, 'insert'>

@@ -10,8 +10,8 @@ import {
 import Button from '@mui/material/Button'
 import CircularProgress from '@mui/material/CircularProgress'
 import Alert from '@mui/material/Alert'
-import { useCart } from '../services/useCart'
-import { useCurrentUser } from '../services/useCurrentUser'
+import { useCart } from '../../services/useCart'
+import { useCurrentUser } from '../../services/useCurrentUser'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
@@ -212,7 +212,6 @@ export default function CheckoutPage() {
                     let ticketType = ''
 
                     if (item.seatIds && item.seatIds.length > 0) {
-                        // For seated items, calculate from seat details
                         const seatPrices = item.seatIds.map(seatId => {
                             const seatDetail = seatDetails[seatId]
                             return seatDetail ? parseFloat(seatDetail.price) : 0
@@ -221,7 +220,6 @@ export default function CheckoutPage() {
                         unitPrice = lineTotal / item.seatIds.length
                         ticketType = `${item.seatIds.length} Selected Seat${item.seatIds.length !== 1 ? 's' : ''}`
                     } else {
-                        // For general admission items
                         unitPrice = getItemPrice(item)
                         lineTotal = unitPrice * item.quantity
                         ticketType = getItemPriceDisplay(item)
