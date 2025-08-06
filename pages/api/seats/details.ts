@@ -19,19 +19,44 @@ export default async function handler(
             return res.status(400).json({ message: 'Seat IDs required' });
         }
 
-        const seatDetails = await db
-            .select({
-                id: seats.id,
-                seat_number: seats.seat_number,
-                row: seats.row,
-                seat_in_row: seats.seat_in_row,
-                status: seats.status,
-                price: ticketOptions.price,
-                ticket_option_name: ticketOptions.name,
-            })
-            .from(seats)
-            .innerJoin(ticketOptions, eq(seats.ticket_option_id, ticketOptions.id))
-            .where(inArray(seats.id, seatIds));
+        const realSeatIds = seatIds.filter(id => !id.startsWith('generated-'));
+        const generatedSeatIds = seatIds.filter(id => id.startsWith('generated-'));
+
+        const seatDetails = [];
+
+        if (realSeatIds.length > 0) {
+            const dbSeats = await db
+                .select({
+                    id: seats.id,
+                    seat_number: seats.seat_number,
+                    row: seats.row,
+                    seat_in_row: seats.seat_in_row,
+                    status: seats.status,
+                    price: ticketOptions.price,
+                    ticket_option_name: ticketOptions.name,
+                })
+                .from(seats)
+                .innerJoin(ticketOptions, eq(seats.ticket_option_id, ticketOptions.id))
+                .where(inArray(seats.id, realSeatIds));
+            
+            seatDetails.push(...dbSeats);
+        }
+
+        generatedSeatIds.forEach(generatedId => {
+            const parts = generatedId.split('-');
+            const rowLetter = parts[parts.length - 1];
+            const seatNumber = parts[parts.length - 1].slice(1);
+            
+            seatDetails.push({
+                id: generatedId,
+                seat_number: seatNumber,
+                row: rowLetter.charAt(0),
+                seat_in_row: parseInt(seatNumber) || 1,
+                status: 'available',
+                price: '75.00',
+                ticket_option_name: 'General Admission'
+            });
+        });
 
         return res.status(200).json({
             seats: seatDetails

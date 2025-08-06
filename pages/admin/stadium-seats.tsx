@@ -19,6 +19,7 @@ interface Event {
     uuid: string;
     name: string;
     location_name?: string;
+    stadium_id?: string;
 }
 
 export default function StadiumSeatGenerator() {
@@ -41,7 +42,7 @@ export default function StadiumSeatGenerator() {
     };
 
     const selectedEventData = events.find(e => e.uuid === selectedEvent);
-    const isBankOfAmericaStadium = selectedEventData?.location_name?.toLowerCase().includes('bank of america stadium');
+    const hasStadium = selectedEventData?.stadium_id;
 
     const generateStadiumSeats = async () => {
         if (!selectedEvent) return;
@@ -144,29 +145,29 @@ export default function StadiumSeatGenerator() {
                             Stadium Seating Configuration
                         </Typography>
 
-                        {isBankOfAmericaStadium ? (
+                        {hasStadium ? (
                             <Box>
                                 <Alert severity="success" sx={{ mb: 2 }}>
-                                    ✅ Bank of America Stadium detected! Stadium seating generation available.
+                                    ✅ Stadium detected! Stadium seating generation available.
                                 </Alert>
                                 
                                 <Typography variant="body1" sx={{ mb: 2 }}>
-                                    This will generate seats for the following sections:
+                                    This will generate seats for ALL stadium sections based on level:
                                 </Typography>
                                 
                                 <Box sx={{ mb: 3, p: 2, backgroundColor: '#f5f5f5', borderRadius: 1 }}>
-                                    <Typography variant="subtitle2" gutterBottom>Upper Level (500s):</Typography>
-                                    <Typography variant="body2" sx={{ mb: 1 }}>• Sections 501, 502, 510 (25 rows, 18 seats each) - $65-75</Typography>
+                                    <Typography variant="subtitle2" gutterBottom>Lower Level sections:</Typography>
+                                    <Typography variant="body2" sx={{ mb: 1 }}>• 1 row × 5 seats = 5 seats per section - $150</Typography>
                                     
-                                    <Typography variant="subtitle2" gutterBottom>Club Level (300s):</Typography>
-                                    <Typography variant="body2" sx={{ mb: 1 }}>• Sections 301, 315 (15 rows, 16 seats each) - $175-200</Typography>
+                                    <Typography variant="subtitle2" gutterBottom>Club Level sections:</Typography>
+                                    <Typography variant="body2" sx={{ mb: 1 }}>• 2 rows × 5 seats = 10 seats per section - $200</Typography>
                                     
-                                    <Typography variant="subtitle2" gutterBottom>Lower Level (100s):</Typography>
-                                    <Typography variant="body2">• Sections 101, 113, 120 (15-20 rows, 20 seats each) - $150-250</Typography>
+                                    <Typography variant="subtitle2" gutterBottom>Upper Level sections:</Typography>
+                                    <Typography variant="body2">• 3 rows × 5 seats = 15 seats per section - $75</Typography>
                                 </Box>
 
                                 <Typography variant="body2" color="primary" sx={{ mb: 2 }}>
-                                    Total: ~3,000 seats across 8 sections with different pricing tiers
+                                    This will create seats for ALL stadium sections (approximately 161 sections)
                                 </Typography>
 
                                 <Button
@@ -177,14 +178,14 @@ export default function StadiumSeatGenerator() {
                                     disabled={loading}
                                     fullWidth
                                 >
-                                    {loading ? 'Generating Stadium Seats...' : 'Generate Bank of America Stadium Seats'}
+                                    {loading ? 'Generating Stadium Seats...' : 'Generate Stadium Seats for All Sections'}
                                 </Button>
                             </Box>
                         ) : (
                             <Alert severity="warning">
-                                Stadium seating generation is currently only available for Bank of America Stadium events.
+                                Stadium seating generation requires an event associated with a stadium.
                                 <br />
-                                Please ensure the event&apos;s location includes &quot;Bank of America Stadium&quot; in the name.
+                                Please ensure the event has a stadium_id set, or set up the stadium data first.
                             </Alert>
                         )}
                     </CardContent>

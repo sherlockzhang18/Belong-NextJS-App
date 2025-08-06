@@ -27,11 +27,23 @@ interface TicketOption {
     seat_type: string;
 }
 
+interface StadiumSection {
+    id: string;
+    section_number: string;
+    section_name: string;
+    level_type: string;
+    max_row: string;
+    seats_per_row: number;
+    pricing_tier: string;
+}
+
 export default function AdminSeats() {
     const [events, setEvents] = useState<Event[]>([]);
     const [selectedEvent, setSelectedEvent] = useState('');
     const [ticketOptions, setTicketOptions] = useState<TicketOption[]>([]);
     const [selectedTicketOption, setSelectedTicketOption] = useState('');
+    const [stadiumSections, setStadiumSections] = useState<StadiumSection[]>([]);
+    const [selectedSection, setSelectedSection] = useState('');
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
     const [rows, setRows] = useState(10);
@@ -44,6 +56,7 @@ export default function AdminSeats() {
     useEffect(() => {
         if (selectedEvent) {
             fetchTicketOptions(selectedEvent);
+            fetchStadiumSections(selectedEvent);
         }
     }, [selectedEvent]);
 
@@ -62,6 +75,16 @@ export default function AdminSeats() {
             setTicketOptions(response.data.ticketOptions || []);
         } catch (error) {
             console.error('Error fetching ticket options:', error);
+        }
+    };
+
+    const fetchStadiumSections = async (eventId: string) => {
+        try {
+            const response = await axios.get(`/api/events/${eventId}/sections`);
+            setStadiumSections(response.data.sections || []);
+        } catch (error) {
+            console.error('Error fetching stadium sections:', error);
+            setStadiumSections([]);
         }
     };
 
@@ -88,17 +111,18 @@ export default function AdminSeats() {
     };
 
     const generateSeats = async () => {
-        if (!selectedEvent || !selectedTicketOption) return;
+        if (!selectedEvent || !selectedTicketOption || !selectedSection) return;
 
         try {
             setLoading(true);
             const response = await axios.post(`/api/events/${selectedEvent}/seats`, {
                 ticketOptionId: selectedTicketOption,
+                sectionId: selectedSection,
                 rows,
                 seatsPerRow
             });
 
-            setMessage(`Successfully created ${response.data.count} seats!`);
+            setMessage(`Successfully created ${response.data.count} seats for ${response.data.sectionName}!`);
         } catch (error: any) {
             setMessage(error.response?.data?.message || 'Failed to generate seats');
         } finally {
@@ -213,7 +237,38 @@ export default function AdminSeats() {
                     <Card>
                         <CardContent>
                             <Typography variant="h6" gutterBottom>
-                                Step 3: Generate Seats
+                                Step 3: Select Stadium Section
+                            </Typography>
+                            
+                            {stadiumSections.length > 0 ? (
+                                <FormControl fullWidth sx={{ mb: 2 }}>
+                                    <InputLabel>Select Stadium Section</InputLabel>
+                                    <Select
+                                        value={selectedSection}
+                                        onChange={(e) => setSelectedSection(e.target.value)}
+                                        label="Select Stadium Section"
+                                    >
+                                        {stadiumSections.map((section) => (
+                                            <MenuItem key={section.id} value={section.id}>
+                                                {section.section_name} (Section {section.section_number}) - {section.level_type} level
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+                            ) : (
+                                <Typography color="textSecondary" sx={{ mb: 2 }}>
+                                    No stadium sections found. Make sure the event is associated with a stadium.
+                                </Typography>
+                            )}
+                        </CardContent>
+                    </Card>
+                )}
+
+                {selectedEvent && selectedTicketOption && selectedSection && (
+                    <Card>
+                        <CardContent>
+                            <Typography variant="h6" gutterBottom>
+                                Step 4: Generate Seats
                             </Typography>
                             
                             <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>

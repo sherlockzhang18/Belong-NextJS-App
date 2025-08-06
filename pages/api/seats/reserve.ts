@@ -25,17 +25,9 @@ export default async function handler(
             return res.status(400).json({ message: 'Seat IDs required' });
         }
 
-        // reserve for 10 minutes only
         const reservedUntil = new Date(Date.now() + reservationMinutes * 60 * 1000);
 
         const result = await db.transaction(async (tx) => {
-            const currentSeats = await tx
-                .select()
-                .from(seats)
-                .where(and(
-                    eq(seats.id, seatIds[0])
-                ));
-
             const unavailableSeats = [];
             const availableSeats = [];
 
@@ -52,14 +44,14 @@ export default async function handler(
                 }
 
                 const now = new Date();
-                const isAvailable = seat.status === 'available' || 
+                const isAvailable = seat.status === 'available' ||
                     (seat.status === 'reserved' && seat.reserved_until && seat.reserved_until < now);
 
                 if (!isAvailable) {
-                    unavailableSeats.push({ 
-                        seatId, 
+                    unavailableSeats.push({
+                        seatId,
                         seatNumber: seat.seat_number,
-                        reason: `Seat is ${seat.status}` 
+                        reason: `Seat is ${seat.status}`
                     });
                 } else {
                     availableSeats.push(seat);
@@ -70,20 +62,20 @@ export default async function handler(
                 return { success: false, unavailableSeats };
             }
 
-            for (const seatId of seatIds) {
+            for (const seat of availableSeats) {
                 await tx
                     .update(seats)
                     .set({
                         status: 'reserved',
                         reserved_until: reservedUntil
                     })
-                    .where(eq(seats.id, seatId));
+                    .where(eq(seats.id, seat.id));
             }
 
-            return { 
-                success: true, 
+            return {
+                success: true,
                 reservedSeats: availableSeats,
-                reservedUntil 
+                reservedUntil
             };
         });
 

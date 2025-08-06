@@ -43,9 +43,7 @@ export default function Home() {
     if (error) return <p style={{ color: 'red' }}>Error: {error}</p>
 
     const today = dayjs().startOf('day')
-    const upcoming = events.filter((e) =>
-        e.date ? e.date.isSame(today, 'day') || e.date.isAfter(today, 'day') : false,
-    )
+    const upcoming = events
 
     return (
         <main>

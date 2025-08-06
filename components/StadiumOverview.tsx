@@ -22,6 +22,7 @@ interface StadiumSection {
     section_name: string;
     level_type: string;
     pricing_tier: string;
+    has_seats: boolean;
     display_config: {
         default_color: string;
         hover_color: string;
@@ -54,15 +55,21 @@ export default function StadiumOverview({ eventId, onSectionSelect }: StadiumOve
                 setLoading(true);
                 setError(null);
 
-                const response = await axios.get(`/api/events/${eventId}/stadium`);
+                const stadiumResponse = await axios.get(`/api/events/${eventId}/stadium`);
                 
-                if (!response.data.hasStadium || !response.data.hasSections) {
+                if (!stadiumResponse.data.hasStadium || !stadiumResponse.data.hasSections) {
                     setError('Stadium layout not available for this event. Please set up the stadium data first.');
                     return;
                 }
 
-                setStadium(response.data.stadium);
-                setSections(response.data.sections);
+                const availabilityResponse = await axios.get(`/api/events/${eventId}/sections-availability`);
+
+                setStadium(stadiumResponse.data.stadium);
+                const sectionsWithAvailability = availabilityResponse.data.sections.map((section: any) => ({
+                    ...section,
+                    display_config: stadiumResponse.data.sections.find((s: any) => s.id === section.id)?.display_config || section.display_config
+                }));
+                setSections(sectionsWithAvailability);
             } catch (err: any) {
                 if (err.response?.status === 404) {
                     setError('Stadium data not found. Please set up Bank of America Stadium in the admin panel first.');
@@ -77,7 +84,11 @@ export default function StadiumOverview({ eventId, onSectionSelect }: StadiumOve
         fetchStadiumData();
     }, [eventId]);
 
-    const handleSectionClick = (sectionId: string, sectionName: string) => {
+    const handleSectionClick = (sectionId: string, sectionName: string, hasSeats: boolean) => {
+        if (!hasSeats) {
+            alert(`Sorry, ${sectionName} is currently not available for ticket sales. Only select sections have seats available for this event.`);
+            return;
+        }
         onSectionSelect(sectionId, sectionName);
     };
 
@@ -191,18 +202,20 @@ export default function StadiumOverview({ eventId, onSectionSelect }: StadiumOve
                                     d={position.path}
                                     fill={hoveredSection === section.id ? 
                                         section.display_config?.hover_color || "#FF5722" : 
-                                        section.display_config?.default_color || "#4A90E2"
+                                        section.has_seats 
+                                            ? (section.display_config?.default_color || "#4A90E2")
+                                            : "#CCCCCC"
                                     }
                                     stroke="#333"
                                     strokeWidth="1"
                                     style={{
                                         transition: 'fill 0.2s ease',
-                                        cursor: 'pointer',
-                                        opacity: 1
+                                        cursor: section.has_seats ? 'pointer' : 'not-allowed',
+                                        opacity: section.has_seats ? 1 : 0.6
                                     }}
                                     onMouseEnter={() => setHoveredSection(section.id)}
                                     onMouseLeave={() => setHoveredSection(null)}
-                                    onClick={() => handleSectionClick(section.id, section.section_name)}
+                                    onClick={() => handleSectionClick(section.id, section.section_name, section.has_seats)}
                                 />
                                 <text
                                     x={position.center_x || 500}
@@ -223,11 +236,21 @@ export default function StadiumOverview({ eventId, onSectionSelect }: StadiumOve
 
             <Box sx={{ mt: 2, textAlign: 'center' }}>
                 <Typography variant="body1" color="text.secondary">
-                    Click on any section in the stadium diagram above to view detailed seating
+                    Click on any highlighted section to view detailed seating
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                    Showing {filteredSections.length} sections • Use the tabs above to filter by level
+                    Showing {filteredSections.length} sections • {filteredSections.filter(s => s.has_seats).length} sections have seats available
                 </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'center', gap: 3, mt: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box sx={{ width: 16, height: 16, backgroundColor: '#4A90E2', border: '1px solid #333' }} />
+                        <Typography variant="body2">Available Sections</Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box sx={{ width: 16, height: 16, backgroundColor: '#CCCCCC', border: '1px solid #333', opacity: 0.6 }} />
+                        <Typography variant="body2">Not Available</Typography>
+                    </Box>
+                </Box>
             </Box>
         </Box>
     );

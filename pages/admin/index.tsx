@@ -17,19 +17,11 @@ export default function AdminPage() {
                 <Box sx={{ display: 'flex', gap: 1 }}>
                     <Button
                         component={Link}
-                        href="/admin/seed-stadium"
+                        href="/admin/stadium-management"
                         variant="contained"
                         color="primary"
                     >
-                        🏗️ Setup Stadium
-                    </Button>
-                    <Button
-                        component={Link}
-                        href="/admin/stadium-seats"
-                        variant="outlined"
-                        color="primary"
-                    >
-                        🏟️ Stadium Seats
+                        �️ Stadium Management
                     </Button>
                     <Button
                         component={Link}

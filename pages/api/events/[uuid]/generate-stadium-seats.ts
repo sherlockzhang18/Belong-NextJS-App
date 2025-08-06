@@ -1,21 +1,15 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { db } from '../../../../utils/db';
-import { seats, ticketOptions, events } from '../../../../drizzle/schema';
+import { seats, ticketOptions, events, stadium_sections, stadiums } from '../../../../drizzle/schema';
 import { eq, and } from 'drizzle-orm';
 
 
-const BANK_OF_AMERICA_SECTIONS = [
-    { section: '501', level: 'upper', pricing_tier: 'standard', rows: 25, seatsPerRow: 18, basePrice: 65 },
-    { section: '502', level: 'upper', pricing_tier: 'standard', rows: 25, seatsPerRow: 18, basePrice: 65 },
-    { section: '510', level: 'upper', pricing_tier: 'standard', rows: 25, seatsPerRow: 18, basePrice: 75 },
-
-    { section: '301', level: 'club', pricing_tier: 'club', rows: 15, seatsPerRow: 16, basePrice: 175 },
-    { section: '315', level: 'club', pricing_tier: 'club', rows: 15, seatsPerRow: 16, basePrice: 200 },
-
-    { section: '101', level: 'lower', pricing_tier: 'premium', rows: 20, seatsPerRow: 20, basePrice: 150 },
-    { section: '113', level: 'lower', pricing_tier: 'field', rows: 15, seatsPerRow: 20, basePrice: 250 },
-    { section: '120', level: 'lower', pricing_tier: 'premium', rows: 20, seatsPerRow: 20, basePrice: 150 },
-];
+const LEVEL_SEAT_CONFIG = {
+    lower: { rows: 1, seatsPerRow: 5, basePrice: 150 },
+    club: { rows: 2, seatsPerRow: 5, basePrice: 200 },
+    upper: { rows: 3, seatsPerRow: 5, basePrice: 75 },
+    field: { rows: 1, seatsPerRow: 5, basePrice: 300 }
+};
 
 export default async function handler(
     req: NextApiRequest,
@@ -42,13 +36,26 @@ export default async function handler(
             }
 
             const event = eventData[0];
-            const isBankOfAmericaStadium = event.location_name?.toLowerCase().includes('bank of america stadium');
+            console.log('Event data:', {
+                name: event.name,
+                location_name: event.location_name,
+                stadium_id: event.stadium_id
+            });
+            
+            const hasStadium = !!event.stadium_id;
+            console.log('Has stadium:', hasStadium);
 
-            if (generateStadiumSeats && isBankOfAmericaStadium) {
+            if (generateStadiumSeats && hasStadium) {
                 return await generateStadiumBasedSeats(uuid, res);
             } else {
+                console.log('Failed condition - generateStadiumSeats:', generateStadiumSeats, 'hasStadium:', hasStadium);
                 return res.status(400).json({ 
-                    message: 'Stadium-based seat generation only available for Bank of America Stadium events' 
+                    message: 'Stadium-based seat generation requires an event with a stadium association',
+                    debug: {
+                        generateStadiumSeats,
+                        hasStadium,
+                        stadium_id: event.stadium_id
+                    }
                 });
             }
 
@@ -66,14 +73,47 @@ async function generateStadiumBasedSeats(eventId: string, res: NextApiResponse) 
     let totalSeatsCreated = 0;
     const ticketOptionsCreated = [];
 
-    for (const sectionData of BANK_OF_AMERICA_SECTIONS) {
+    const event = await db
+        .select({ stadium_id: events.stadium_id })
+        .from(events)
+        .where(eq(events.uuid, eventId))
+        .limit(1);
+
+    if (!event[0]?.stadium_id) {
+        console.log('Event stadium_id missing:', event[0]);
+        return res.status(400).json({ message: 'Event must be associated with a stadium' });
+    }
+
+    console.log('Event stadium_id:', event[0].stadium_id);
+
+    const stadiumSections = await db
+        .select()
+        .from(stadium_sections)
+        .where(and(
+            eq(stadium_sections.stadium_id, event[0].stadium_id),
+            eq(stadium_sections.is_active, true)
+        ));
+
+    console.log('Found stadium sections:', stadiumSections.length);
+    console.log('Stadium sections:', stadiumSections.map(s => ({ id: s.id, section_number: s.section_number, section_name: s.section_name })));
+
+    if (stadiumSections.length === 0) {
+        return res.status(400).json({ message: 'No active stadium sections found' });
+    }
+
+    for (const stadiumSection of stadiumSections) {
+        const seatConfig = LEVEL_SEAT_CONFIG[stadiumSection.level_type as keyof typeof LEVEL_SEAT_CONFIG] 
+            || LEVEL_SEAT_CONFIG.lower;
+
+        const totalSeatsInSection = seatConfig.rows * seatConfig.seatsPerRow;
+
         const [ticketOption] = await db
             .insert(ticketOptions)
             .values({
                 event_id: eventId,
-                name: `Section ${sectionData.section} - ${sectionData.level.charAt(0).toUpperCase() + sectionData.level.slice(1)} Level`,
-                price: sectionData.basePrice.toString(),
-                quantity: sectionData.rows * sectionData.seatsPerRow,
+                name: `${stadiumSection.section_name}`,
+                price: seatConfig.basePrice.toString(),
+                quantity: totalSeatsInSection,
                 seat_type: 'assigned'
             })
             .returning();
@@ -83,18 +123,18 @@ async function generateStadiumBasedSeats(eventId: string, res: NextApiResponse) 
         const seatsToInsert = [];
         const rowLabels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
-        for (let rowIndex = 0; rowIndex < sectionData.rows; rowIndex++) {
+        for (let rowIndex = 0; rowIndex < seatConfig.rows; rowIndex++) {
             const rowLabel = rowLabels[rowIndex];
             
-            for (let seatNum = 1; seatNum <= sectionData.seatsPerRow; seatNum++) {
+            for (let seatNum = 1; seatNum <= seatConfig.seatsPerRow; seatNum++) {
                 seatsToInsert.push({
                     event_id: eventId,
                     ticket_option_id: ticketOption.id,
-                    seat_number: `${sectionData.section}-${rowLabel}${seatNum}`,
+                    section_id: stadiumSection.id,
+                    seat_number: `${stadiumSection.section_number}-${rowLabel}${seatNum}`,
                     row: rowLabel,
                     seat_in_row: seatNum,
                     status: 'available' as const,
-                    section_id: null
                 });
             }
         }
@@ -104,13 +144,18 @@ async function generateStadiumBasedSeats(eventId: string, res: NextApiResponse) 
     }
 
     return res.status(201).json({
-        message: `Successfully created ${totalSeatsCreated} seats across ${BANK_OF_AMERICA_SECTIONS.length} sections`,
-        sectionsCreated: BANK_OF_AMERICA_SECTIONS.length,
+        message: `Successfully created ${totalSeatsCreated} seats across ${stadiumSections.length} sections`,
+        sectionsCreated: stadiumSections.length,
         totalSeats: totalSeatsCreated,
         ticketOptions: ticketOptionsCreated.map(to => ({
             id: to.id,
             name: to.name,
             price: to.price
-        }))
+        })),
+        seatConfiguration: {
+            lower: `${LEVEL_SEAT_CONFIG.lower.rows} row × ${LEVEL_SEAT_CONFIG.lower.seatsPerRow} seats = ${LEVEL_SEAT_CONFIG.lower.rows * LEVEL_SEAT_CONFIG.lower.seatsPerRow} seats per section`,
+            club: `${LEVEL_SEAT_CONFIG.club.rows} rows × ${LEVEL_SEAT_CONFIG.club.seatsPerRow} seats = ${LEVEL_SEAT_CONFIG.club.rows * LEVEL_SEAT_CONFIG.club.seatsPerRow} seats per section`,
+            upper: `${LEVEL_SEAT_CONFIG.upper.rows} rows × ${LEVEL_SEAT_CONFIG.upper.seatsPerRow} seats = ${LEVEL_SEAT_CONFIG.upper.rows * LEVEL_SEAT_CONFIG.upper.seatsPerRow} seats per section`
+        }
     });
 }

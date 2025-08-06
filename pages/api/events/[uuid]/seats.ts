@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { db } from '../../../../utils/db';
-import { seats, ticketOptions, events } from '../../../../drizzle/schema';
+import { seats, ticketOptions, events, stadium_sections } from '../../../../drizzle/schema';
 import { eq, and } from 'drizzle-orm';
 
 export default async function handler(
@@ -15,6 +15,8 @@ export default async function handler(
 
     if (req.method === 'GET') {
         try {
+            console.log('Fetching seats for event:', uuid);
+            
             const eventSeats = await db
                 .select({
                     id: seats.id,
@@ -35,9 +37,15 @@ export default async function handler(
                 .where(eq(seats.event_id, uuid))
                 .orderBy(seats.row, seats.seat_in_row);
 
+            console.log('Found seats:', eventSeats.length);
+            if (eventSeats.length > 0) {
+                console.log('Sample seat:', eventSeats[0]);
+            }
+
             const hasAssignedSeats = eventSeats.length > 0;
 
             if (!hasAssignedSeats) {
+                console.log('No assigned seats found, checking for general tickets');
                 const generalTickets = await db
                     .select()
                     .from(ticketOptions)
@@ -45,6 +53,8 @@ export default async function handler(
                         eq(ticketOptions.event_id, uuid),
                         eq(ticketOptions.seat_type, 'general')
                     ));
+
+                console.log('General tickets found:', generalTickets.length);
 
                 return res.status(200).json({
                     seats: [],
@@ -67,10 +77,14 @@ export default async function handler(
 
     if (req.method === 'POST') {
         try {
-            const { ticketOptionId, rows = 10, seatsPerRow = 10 } = req.body;
+            const { ticketOptionId, sectionId, rows = 10, seatsPerRow = 10 } = req.body;
 
             if (!ticketOptionId) {
                 return res.status(400).json({ message: 'Ticket option ID required' });
+            }
+
+            if (!sectionId) {
+                return res.status(400).json({ message: 'Section ID required' });
             }
 
             const ticketOption = await db
@@ -86,6 +100,16 @@ export default async function handler(
                 return res.status(404).json({ message: 'Ticket option not found' });
             }
 
+            const section = await db
+                .select()
+                .from(stadium_sections)
+                .where(eq(stadium_sections.id, sectionId))
+                .limit(1);
+
+            if (section.length === 0) {
+                return res.status(404).json({ message: 'Stadium section not found' });
+            }
+
             const seatsToInsert = [];
             const rowLabels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
@@ -95,6 +119,7 @@ export default async function handler(
                     seatsToInsert.push({
                         event_id: uuid,
                         ticket_option_id: ticketOptionId,
+                        section_id: sectionId,
                         seat_number: `${rowLabel}${seatNum}`,
                         row: rowLabel,
                         seat_in_row: seatNum,
@@ -106,8 +131,9 @@ export default async function handler(
             await db.insert(seats).values(seatsToInsert);
 
             return res.status(201).json({
-                message: `Created ${seatsToInsert.length} seats`,
-                count: seatsToInsert.length
+                message: `Created ${seatsToInsert.length} seats for section ${section[0].section_name}`,
+                count: seatsToInsert.length,
+                sectionName: section[0].section_name
             });
 
         } catch (error) {
